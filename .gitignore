@@ -2,3 +2,4 @@ cache/*
 serve_images/*
 __pycache__
 *.json
+*.log

@@ -41,3 +41,5 @@
 2024-05-08 20:14:44 | INFO | model_worker | Send heart beat. Models: ['llava-next-72b']. Semaphore: Semaphore(value=5, locked=False). global_counter: 4
 2024-05-08 20:14:59 | INFO | model_worker | Send heart beat. Models: ['llava-next-72b']. Semaphore: Semaphore(value=5, locked=False). global_counter: 4
 2024-05-08 20:15:14 | INFO | model_worker | Send heart beat. Models: ['llava-next-72b']. Semaphore: Semaphore(value=5, locked=False). global_counter: 4
+2024-05-08 20:15:29 | INFO | model_worker | Send heart beat. Models: ['llava-next-72b']. Semaphore: Semaphore(value=5, locked=False). global_counter: 4
+2024-05-08 20:15:44 | INFO | model_worker | Send heart beat. Models: ['llava-next-72b']. Semaphore: Semaphore(value=5, locked=False). global_counter: 4
