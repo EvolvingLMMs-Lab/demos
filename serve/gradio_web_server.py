@@ -439,7 +439,8 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
     ) as demo:
         state = gr.State()
         if not embed_mode:
-            gr.Markdown(title_markdown)
+            # gr.Markdown(title_markdown)
+            gr.HTML(html_header)
 
         with gr.Row():
             with gr.Column(scale=1):
