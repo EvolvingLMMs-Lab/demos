@@ -69,6 +69,7 @@ class ModelWorker:
         self.controller_addr = controller_addr
         self.worker_addr = worker_addr
         self.worker_id = worker_id
+        self.sgl_endpoint = sgl_endpoint
 
         # Select backend
         backend = RuntimeEndpoint(sgl_endpoint)
@@ -153,6 +154,7 @@ class ModelWorker:
 
     def get_status(self):
         return {
+            "sgl_endpoint": self.sgl_endpoint,
             "model_names": [self.model_name],
             "speed": 1,
             "queue_length": self.get_queue_length(),

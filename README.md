@@ -1,6 +1,6 @@
 # Installation
 
-curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb && 
+<!-- curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb &&  -->
 
 sudo dpkg -i cloudflared.deb && 
 
@@ -11,13 +11,14 @@ pip install -e "python[srt]"
 
 cd ..;
 
-python -m sglang.launch_server --model-path lmms-lab/llava-next-72b --tokenizer-path lmms-lab/llavanext-qwen-tokenizer --port=30000 --host="127.0.0.1" --tp-size=8;
+CUDA_VISIBLE_DEVICES=5,6 python -m sglang.launch_server --model-path lmms-lab/llava-next-72b --tokenizer-path lmms-lab/llavanext-qwen-tokenizer --port=30000 --host="127.0.0.1" --tp-size=2
+CUDA_VISIBLE_DEVICES=0,1,2,3 python -m sglang.launch_server --model-path lmms-lab/llama3-llava-next-8b --tokenizer-path lmms-lab/llama3-llava-next-8b-tokenizer --port=30010 --host="127.0.0.1" --tp-size=4
 
-python -m serve.controller --host 0.0.0.0 --port 10010
 
-python serve/gradio_web_server.py --controller-url=http://localhost:10010 --model-list-mode reload
-
-python -m llava.serve.sglang_worker --host 0.0.0.0 --controller http://localhost:10010 --port 40000 --worker http://localhost:40000 --sgl-endpoint http://127.0.0.1:30000
+python serve/controller.py --host 0.0.0.0 --port 12355
+python serve/gradio_web_server.py --controller-url=http://localhost:12355 --model-list-mode reload --moderate
+python serve/sglang_worker.py --host 0.0.0.0 --controller http://localhost:12355 --port 40000 --worker http://localhost:40000 --sgl-endpoint http://127.0.0.1:30000 
+python serve/sglang_worker.py --host 0.0.0.0 --controller http://localhost:12355 --port 3000 --worker http://localhost:3000 --sgl-endpoint http://127.0.0.1:10003
 <!-- python multimodal_chat.py --sglang_port=30000 -->
 
 pip install gradio==4.29.0
