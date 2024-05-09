@@ -8,7 +8,6 @@ import gradio as gr
 import requests
 
 from llava.conversation import default_conversation, conv_templates, SeparatorStyle
-from llava.constants import LOGDIR
 from llava.utils import (
     build_logger,
     server_error_msg,
@@ -17,6 +16,7 @@ from llava.utils import (
 )
 import hashlib
 import PIL
+import shortuuid
 
 logger = build_logger("gradio_web_server", "./logs/gradio_web_server.log")
 
@@ -27,6 +27,7 @@ enable_btn = gr.Button(interactive=True)
 disable_btn = gr.Button(interactive=False)
 
 PARENT_FOLDER = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+LOGDIR=f"{PARENT_FOLDER}/logs"
 print(PARENT_FOLDER)
 
 priority = {
@@ -37,7 +38,7 @@ priority = {
 
 def get_conv_log_filename():
     t = datetime.datetime.now()
-    name = os.path.join(LOGDIR, f"{t.year}-{t.month:02d}-{t.day:02d}-conv.json")
+    name = os.path.join(LOGDIR, f"{t.year}-{t.month:02d}-{t.day:02d}-user_conv.json")
     return name
 
 
@@ -59,6 +60,16 @@ function() {
     return url_params;
     }
 """
+
+
+def get_new_state(template_name=None):
+    if template_name is not None:
+        state = conv_templates[template_name].copy()
+    else:
+        state = default_conversation.copy()
+
+    state.identifier = shortuuid.uuid()
+    return state
 
 
 def load_demo(url_params, request: gr.Request):
@@ -121,30 +132,52 @@ def regenerate(state, image_process_mode, request: gr.Request):
     if type(prev_human_msg[1]) in (tuple, list):
         prev_human_msg[1] = (*prev_human_msg[1][:2], image_process_mode)
     state.skip_next = False
-    return (state, state.to_gradio_chatbot(), gr.MultimodalTextbox(value=None, interactive=True), None) + (disable_btn,) * 5
+    return (
+        state,
+        state.to_gradio_chatbot(),
+        gr.MultimodalTextbox(value=None, interactive=True),
+        None,
+    ) + (disable_btn,) * 5
 
 
 def clear_history(request: gr.Request):
     logger.info(f"clear_history. ip: {request.client.host}")
     state = default_conversation.copy()
-    return (state, state.to_gradio_chatbot(), gr.MultimodalTextbox(value=None, interactive=True), None) + (disable_btn,) * 5
+    return (
+        state,
+        state.to_gradio_chatbot(),
+        gr.MultimodalTextbox(value=None, interactive=True),
+        None,
+    ) + (disable_btn,) * 5
 
 
 def add_text(state, messages, image_process_mode, request: gr.Request):
-    image = [PIL.Image.open(image_path) for image_path in messages["files"]]
+    image = [
+        PIL.Image.open(image_path).convert("RGB") for image_path in messages["files"]
+    ] if len(messages["files"]) > 0 else None
     text = messages["text"]
-    print(messages)
     logger.info(f"add_text. ip: {request.client.host}. len: {len(text)}")
     if len(text) <= 0 and image is None:
         state.skip_next = True
-        return (state, state.to_gradio_chatbot(), gr.MultimodalTextbox(value=None, interactive=True), None) + (no_change_btn,) * 5
-    if args.moderate:
+        return (
+            state,
+            state.to_gradio_chatbot(),
+            gr.MultimodalTextbox(value=None, interactive=True),
+            None,
+        ) + (no_change_btn,) * 5
+    if True:
         flagged = violates_moderation(text)
         if flagged:
+            logger.info(f"######################### Moderating: {text} #########################")
+            logger.info(f"######################### FLAG: {flagged} #########################")
             state.skip_next = True
-            return (state, state.to_gradio_chatbot(), moderation_msg, None) + (
-                no_change_btn,
-            ) * 5
+            mod_value = {
+                "text": moderation_msg,
+                "files": []
+            }
+            return (state, state.to_gradio_chatbot(), gr.MultimodalTextbox(value=mod_value, interactive=True), None) + (
+                enable_btn, disable_btn, disable_btn, disable_btn, enable_btn
+            )
 
     # text = text[:1536]  # Hard cut-off
     if image is not None:
@@ -157,7 +190,12 @@ def add_text(state, messages, image_process_mode, request: gr.Request):
     state.append_message(state.roles[0], text)
     state.append_message(state.roles[1], None)
     state.skip_next = False
-    return (state, state.to_gradio_chatbot(), gr.MultimodalTextbox(value=None, interactive=True), None) + (disable_btn,) * 5
+    return (
+        state,
+        state.to_gradio_chatbot(),
+        gr.MultimodalTextbox(value=None, interactive=False),
+        None,
+    ) + (disable_btn,) * 5
 
 
 def http_bot(
@@ -215,15 +253,24 @@ def http_bot(
                     template_name = "v0_mmtag"
                 else:
                     template_name = "llava_v0"
+        elif "mistral" in model_name.lower() or "mixtral" in model_name.lower():
+            if "orca" in model_name.lower():
+                template_name = "mistral_orca"
+            elif "hermes" in model_name.lower():
+                template_name = "mistral_direct"
+            else:
+                template_name = "mistral_instruct"
+        elif "hermes" in model_name.lower():
+            template_name = "mistral_direct"
+        elif "zephyr" in model_name.lower():
+            template_name = "mistral_zephyr"
         elif "mpt" in model_name:
             template_name = "mpt_text"
         elif "llama-2" in model_name:
             template_name = "llama_2"
         else:
             template_name = "vicuna_v1"
-
-        logger.info(f"============= template_name: {template_name} =============")
-        new_state = conv_templates[template_name].copy()
+        new_state = get_new_state(template_name)
         new_state.append_message(new_state.roles[0], state.messages[-2][1])
         new_state.append_message(new_state.roles[1], None)
         state = new_state
@@ -246,7 +293,7 @@ def http_bot(
             disable_btn,
             disable_btn,
             enable_btn,
-            enable_btn,
+            disable_btn,
         )
         return
 
@@ -285,7 +332,6 @@ def http_bot(
     state.messages[-1][-1] = "▌"
     yield (state, state.to_gradio_chatbot()) + (disable_btn,) * 5
 
-    output = None
     try:
         # Stream output
         response = requests.post(
@@ -293,15 +339,18 @@ def http_bot(
             headers=headers,
             json=pload,
             stream=True,
-            timeout=10,
+            timeout=100,
         )
+        last_print_time = time.time()
         for chunk in response.iter_lines(decode_unicode=False, delimiter=b"\0"):
             if chunk:
                 data = json.loads(chunk.decode())
                 if data["error_code"] == 0:
                     output = data["text"][len(prompt) :].strip()
                     state.messages[-1][-1] = output + "▌"
-                    yield (state, state.to_gradio_chatbot()) + (disable_btn,) * 5
+                    if time.time() - last_print_time > 0.05:
+                        last_print_time = time.time()
+                        yield (state, state.to_gradio_chatbot()) + (disable_btn,) * 5
                 else:
                     output = data["text"] + f" (error_code: {data['error_code']})"
                     state.messages[-1][-1] = output
@@ -337,7 +386,7 @@ def http_bot(
             "type": "chat",
             "model": model_name,
             "start": round(start_tstamp, 4),
-            "finish": round(finish_tstamp, 4),
+            "finish": round(start_tstamp, 4),
             "state": state.dict(),
             "images": all_image_hash,
             "ip": request.client.host,
@@ -346,8 +395,11 @@ def http_bot(
 
 
 from serve_constants import *
+
+
 def print_like_dislike(x: gr.LikeData):
     print(x.index, x.value, x.liked)
+
 
 def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
     # textbox = gr.Textbox(
@@ -437,23 +489,17 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
 
                 gr.Examples(
                     examples=[
-                        # {
-                        #     "files": [
-                        #         f"{PARENT_FOLDER}/assets/user_example_03.jpg",
-                        #     ],
-                        #     "text": "What characters are used in this captcha? Write them sequentially",
-                        # },
-                        {
-                            "files": [
-                                f"{PARENT_FOLDER}/assets/user_example_01.jpg",
-                            ],
-                            "text": "Explain this diagram.",
-                        },
                         {
                             "files": [
                                 f"{PARENT_FOLDER}/assets/user_example_04.jpg",
                             ],
                             "text": "What is the latex code for this image?",
+                        },
+                        {
+                            "files": [
+                                f"{PARENT_FOLDER}/assets/user_example_11.png",
+                            ],
+                            "text": "write an image prompt for this character without details about the surrounding.\nInclude color and details about all of these variables: age, eyes, hair, skin, expression, clothes",
                         },
                         {
                             "files": [
@@ -485,6 +531,12 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
                                 ],
                                 "text": "这个是什么猫？它在干啥？",
                             },
+                            {
+                                "files": [
+                                    f"{PARENT_FOLDER}/assets/user_example_10.png",
+                                ],
+                                "text": "Here's a design for blogging website. Provide the working source code for the website using HTML, CSS and JavaScript as required.",
+                            },
                         ],
                         inputs=[textbox],
                     )
@@ -493,21 +545,24 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
                 textbox.render()
                 with gr.Row(elem_id="buttons") as button_row:
                     clear_btn = gr.Button(value="🗑️  Clear", interactive=False)
-                    upvote_btn = gr.Button(value="Up-Vote", interactive=False)
-                    downvote_btn = gr.Button(value="Down-Vote", interactive=False)
-                    flag_btn = gr.Button(value="Flag", interactive=False, visible=False)
-                    regenerate_btn = gr.Button(
-                        value="🔄 Regenerate", interactive=False
+                    upvote_btn = gr.Button(
+                        value="Up-Vote", interactive=False, visible=False
                     )
+                    downvote_btn = gr.Button(
+                        value="Down-Vote", interactive=False, visible=False
+                    )
+                    flag_btn = gr.Button(value="Flag", interactive=False, visible=False)
+                    regenerate_btn = gr.Button(value="🔄 Regenerate", interactive=False)
                     submit_btn = gr.Button(value="Send", variant="primary")
 
         if not embed_mode:
             gr.Markdown(tos_markdown)
             gr.Markdown(learn_more_markdown)
+            gr.Markdown(bibtext)
         url_params = gr.JSON(visible=False)
 
         # Register listeners
-        btn_list = [upvote_btn, downvote_btn, flag_btn, regenerate_btn, clear_btn]
+        btn_list = [upvote_btn, downvote_btn, regenerate_btn, clear_btn, submit_btn]
         upvote_btn.click(
             upvote_last_response,
             [state, model_selector],
@@ -552,7 +607,7 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
             [state, model_selector, temperature, top_p, max_output_tokens],
             [state, chatbot] + btn_list,
             concurrency_limit=concurrency_count,
-        ).then(lambda: gr.MultimodalTextbox(interactive=True), None, [textbox])
+        )
 
         chatbot.like(print_like_dislike, None, None)
 
@@ -588,8 +643,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", type=str, default="0.0.0.0")
     parser.add_argument("--port", type=int)
-    parser.add_argument("--controller-url", type=str, default="http://localhost:50010")
-    parser.add_argument("--concurrency-count", type=int, default=16)
+    parser.add_argument("--controller-url", type=str, default="http://localhost:50030")
+    parser.add_argument("--concurrency-count", type=int, default=32)
     parser.add_argument(
         "--model-list-mode", type=str, default="once", choices=["once", "reload"]
     )

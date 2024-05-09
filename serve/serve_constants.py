@@ -1,9 +1,12 @@
 title_markdown = """
-# [LLaVA-NeXT: Stronger LLMs Supercharge Multimodal Capabilities in the Wild](https://llava-vl.github.io/blog/2024-05-10-llava-next-stronger-llms/)
-"""
-
-sub_title_markdown = """
-> This is a simple demo webpage showcasing the versatile capabilities of our model. We are operating on 8 * A100-40GB GPUs with SGLang. Please note that during the serving process, there may be congestion leading to delayed responses. If you encounter any issues with the webpage, kindly refresh it.
+<div style="display: flex; justify-content: left; align-items: center; text-align: left; background: linear-gradient(45deg, rgba(195, 253, 245, 0.8), rgba(255, 0, 80, 0.3)); border-radius: 10px; box-shadow: 0 8px 16px 0 rgba(0,0,0,0.1);">  <a href="https://llava-vl.github.io/blog/2024-05-10-llava-next-stronger-llms/" style="margin-right: 20px; text-decoration: none; display: flex; align-items: center;">
+    <img src="https://i.postimg.cc/JhT7zPj3/assistant-logo.png" alt="LLaVA-NeXT" style="max-width: 80px; height: auto; border-radius: 10px;">
+  </a>
+  <div>
+    <h2 ><a href="https://llava-vl.github.io/blog/2024-05-10-llava-next-stronger-llms/">LLaVA-NeXT: Stronger LLMs Supercharge Multimodal Capabilities in the Wild</a> </h2>
+    <h5 style="margin: 0;"><a href="https://github.com/LLaVA-VL/LLaVA-NeXT">Github</a> | <a href="https://huggingface.co/collections/lmms-lab/llava-next-6623288e2d61edba3ddbf5ff">Huggingface</a> | <a href="https://llava-vl.github.io/blog/">More Blogs</a></h5>
+  </div>
+</div>
 """
 
 block_css = """
@@ -16,8 +19,10 @@ tos_markdown = """
 ## Terms of use
 By using this service, users are required to agree to the following terms:
 The service is a research preview intended for non-commercial use only. It only provides limited safety measures and may generate offensive content. It must not be used for any illegal, harmful, violent, racist, or sexual purposes. The service may collect user dialogue data for future research.
-Please click the "Flag" button if you get any inappropriate answer! We will collect those to keep improving our moderator.
+
 For an optimal experience, please use desktop computers for this demo, as mobile devices may compromise its quality.
+
+We deploy our model backend with SGLang. However, there could be congestion during the serving process, leading to delayed responses. If you encounter any issues with the webpage, kindly refresh it.
 """
 
 
