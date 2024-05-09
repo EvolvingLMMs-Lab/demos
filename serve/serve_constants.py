@@ -4,7 +4,7 @@ title_markdown = """
   </a>
   <div>
     <h2 ><a href="https://llava-vl.github.io/blog/2024-05-10-llava-next-stronger-llms/">LLaVA-NeXT: Stronger LLMs Supercharge Multimodal Capabilities in the Wild</a> </h2>
-    <h5 style="margin: 0;"><a href="https://github.com/LLaVA-VL/LLaVA-NeXT">Github</a> | <a href="https://huggingface.co/collections/lmms-lab/llava-next-6623288e2d61edba3ddbf5ff">Huggingface</a> | <a href="https://llava-vl.github.io/blog/">More Blogs</a></h5>
+    <h5 style="margin: 0;"><a href="https://llavanext-video.lmms-lab.com/">Video Demo</a> | <a href="https://github.com/LLaVA-VL/LLaVA-NeXT">Github</a> | <a href="https://huggingface.co/collections/lmms-lab/llava-next-6623288e2d61edba3ddbf5ff">Huggingface</a> | <a href="https://llava-vl.github.io/blog/2024-05-10-llava-next-stronger-llms/">Blog</a> | <a href="https://llava-vl.github.io">More</a></h5>
   </div>
 </div>
 """
