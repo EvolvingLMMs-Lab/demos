@@ -29,6 +29,11 @@ html_header = """
   border-radius: 10px;
 }
 
+.header-container a {
+  color: black; /* Ensure text color is always black */
+  text-decoration: none;
+}
+
 /* Responsive adjustments for screens less than 768px wide */
 @media (max-width: 768px) {
   .header-container {
@@ -42,16 +47,27 @@ html_header = """
   }
 
   .header-container h2, .header-container h5 {
+  color: black; /* Ensure text color is always black */
+  text-decoration: none;
     text-align: center; /* Center text on small screens */
     margin-top: 5px; /* Add top margin for better spacing after stacking */
   }
 
   .header-container h2 {
+  color: black; /* Ensure text color is always black */
+  text-decoration: none;
     font-size: 16px; /* Smaller font size for the title on mobile */
   }
 
   .header-container h5 {
+  color: black; /* Ensure text color is always black */
+  text-decoration: none;
     font-size: 12px; /* Smaller font size for the subtitle on mobile */
+  }
+
+  .header-container a {
+  color: black; /* Ensure text color is always black */
+  text-decoration: none;
   }
 }
 </style>
@@ -62,7 +78,7 @@ html_header = """
   </a>
   <div>
     <h2><a href="https://llava-vl.github.io/blog/2024-05-10-llava-next-stronger-llms/">LLaVA-NeXT: Stronger LLMs Supercharge Multimodal Capabilities in the Wild</a></h2>
-    <h5><a href="https://llavanext-video.lmms-lab.com/">Video Model</a> | <a href="https://github.com/LLaVA-VL/LLaVA-NeXT">Github</a> | <a href="https://huggingface.co/collections/lmms-lab/llava-next-6623288e2d61edba3ddbf5ff">Huggingface</a> | <a href="https://llava-vl.github.io/blog/2024-05-10-llava-next-stronger-llms/">Blog</a> | <a href="https://llava-vl.github.io">More</a></h5>
+    <h5><a href="https://github.com/LLaVA-VL/LLaVA-NeXT">Github</a> | <a href="https://huggingface.co/collections/lmms-lab/llava-next-6623288e2d61edba3ddbf5ff">Huggingface</a> | <a href="https://llava-vl.github.io/blog/2024-05-10-llava-next-stronger-llms/">Blog</a> | <a href="https://llava-vl.github.io/blog/2024-04-30-llava-next-video/">More : Video Model</a></h5>
   </div>
 </div>
 """

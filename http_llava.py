@@ -23,6 +23,7 @@ from llava.conversation import (
     conv_qwen,
 )
 
+# installing latest llava-next: pip install git+https://github.com/LLaVA-VL/LLaVA-NeXT.git
 
 async def send_request(url, data, delay=0):
     await asyncio.sleep(delay)
@@ -42,7 +43,7 @@ async def test_concurrent(args):
                 url + "/generate",
                 {
                     "text": "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nYou are a helpful language and vision assistant. You are able to understand the visual content that the user provides, and assist the user with a variety of tasks using natural language.<|eot_id|><|start_header_id|><|start_header_id|>user<|end_header_id|>\n\n<image>\nPlease generate caption towards this image.<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n",
-                    "image_data": "/mnt/bn/vl-research/workspace/boli01/projects/demos/assets/user_example_03.jpg",
+                    "image_data": "https://github.com/sgl-project/sglang/blob/main/assets/logo_square.png",
                     "sampling_params": {
                         "temperature": 0,
                         "max_new_tokens": 1024,
@@ -63,16 +64,16 @@ import base64
 def test_streaming(args):
     url = f"{args.host}:{args.port}"
     pload = {
-        "text": "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nYou are a helpful language and vision assistant. You are able to understand the visual content that the user provides, and assist the user with a variety of tasks using natural language.<|eot_id|><|start_header_id|><|start_header_id|>user<|end_header_id|>\n\n<image>\nこの猫の目の大きさは、どのような理由で他の猫と比べて特に大きく見えますか？<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n",
+        "text": "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nYou are a helpful language and vision assistant. You are able to understand the visual content that the user provides, and assist the user with a variety of tasks using natural language.<|eot_id|><|start_header_id|><|start_header_id|>user<|end_header_id|>\n\n<image>\nPlease generate caption towards this image.<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n",
         "sampling_params": {
             "max_new_tokens": 1024,
-            "temperature": 0.5,
+            "temperature": 0,
             "top_p": 1.0,
             "presence_penalty": 2,
             "frequency_penalty": 2,
             "stop": "<|eot_id|>",
         },
-        "image_data": "/tmp/gradio/b7b8f04e74cda37d9a574c1a2098d7e4ee97b212/user_example_05.jpg",
+        "image_data": "https://github.com/sgl-project/sglang/blob/main/assets/logo_square.png",
         "stream": True,
     }
     response = requests.post(
@@ -80,19 +81,6 @@ def test_streaming(args):
         json=pload,
         stream=True,
     )
-    # response = requests.post(
-    #     url + "/generate",
-    #     json={
-    #         "text": "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nYou are a helpful language and vision assistant. You are able to understand the visual content that the user provides, and assist the user with a variety of tasks using natural language.<|eot_id|><|start_header_id|><|start_header_id|>user<|end_header_id|>\n\n<image>\nPlease generate caption towards this image.<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n",
-    #         "image_data": "/mnt/bn/vl-research/workspace/boli01/projects/demos/assets/user_example_03.jpg",
-    #         "sampling_params": {
-    #             "temperature": 0,
-    #             "max_new_tokens": 1024,
-    #         },
-    #         "stream": True,
-    #     },
-    #     stream=True,
-    # )
 
     prev = 0
     for chunk in response.iter_lines(decode_unicode=False):
@@ -112,7 +100,5 @@ if __name__ == "__main__":
     parser.add_argument("--host", type=str, default="http://127.0.0.1")
     parser.add_argument("--port", type=int, default=30000)
     args = parser.parse_args()
-
-    # asyncio.run(test_concurrent(args))
-
+    asyncio.run(test_concurrent(args))
     test_streaming(args)

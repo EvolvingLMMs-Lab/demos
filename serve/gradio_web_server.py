@@ -314,12 +314,13 @@ def http_bot(
     if len(all_images_path) > 1:
         image_data = process_images(all_images_path, size=1008)
         t = datetime.datetime.now()
+        hash = hashlib.md5(image_data.tobytes()).hexdigest()
         filename = os.path.join(
             LOGDIR, "serve_images", f"{t.year}-{t.month:02d}-{t.day:02d}", f"{hash}.jpg"
         )
         if not os.path.isdir(os.path.dirname(filename)):
             os.makedirs(os.path.dirname(filename), exist_ok=True)
-        image.save(filename)
+        image_data.save(filename)
         image_data = filename
     else:
         image_data = all_images_path[0]
@@ -329,8 +330,8 @@ def http_bot(
             "max_new_tokens": min(int(max_new_tokens), 8192),
             "temperature": float(temperature),
             "top_p": float(top_p),
-            "presence_penalty": 2,
-            "frequency_penalty": 2,
+            # "presence_penalty": 2,
+            # "frequency_penalty": 2,
             "stop": stop_style,
         },
         "image_data": image_data,
@@ -547,7 +548,7 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
                                 "files": [
                                     f"{PARENT_FOLDER}/assets/user_example_09.jpg",
                                 ],
-                                "text": "Please write a Chinese poem for this painting.",
+                                "text": "请针对于这幅画写一首中文古诗。",
                             },
                             {
                                 "files": [
