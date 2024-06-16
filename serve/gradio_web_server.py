@@ -42,6 +42,10 @@ def get_conv_log_filename():
     name = os.path.join(LOGDIR, f"{t.year}-{t.month:02d}-{t.day:02d}-user_conv.json")
     return name
 
+def get_request_limit_by_ip_filename():
+    t = datetime.datetime.now()
+    name = os.path.join(LOGDIR, f"{t.year}-{t.month:02d}-{t.day:02d}-request_limit_by_ip.json")
+    return name
 
 def get_model_list():
     ret = requests.post(args.controller_url + "/refresh_all_workers")
@@ -161,13 +165,18 @@ def clear_history(request: gr.Request):
         None,
     ) + (disable_btn,) * 5
 
-
+RPM_LIMIT = 300
 def add_text(state, messages, image_process_mode, request: gr.Request):
     image = [
         image_path for image_path in messages["files"]
     ] if len(messages["files"]) > 0 else None
     text = messages["text"]
     logger.info(f"add_text. ip: {request.client.host}. len: {len(text)}")
+
+    if state is None:
+        state = default_conversation.copy()
+        
+    # Moderation
     if len(text) <= 0 and image is None:
         state.skip_next = True
         return (state, state.to_gradio_chatbot(), gr.MultimodalTextbox(value=None, interactive=True), None,) + (no_change_btn,) * 5
@@ -196,6 +205,33 @@ def add_text(state, messages, image_process_mode, request: gr.Request):
         else:
             text = text.replace("BEAST_MODE:", "").strip()
 
+    # Request limit by IP
+    rpm_data = {}
+    current_user_request_by_ip_file = get_request_limit_by_ip_filename()
+    if not os.path.isfile(current_user_request_by_ip_file):
+        with open(current_user_request_by_ip_file, "w") as fout:
+            json.dump({}, fout)
+            
+    with open(current_user_request_by_ip_file, "r") as fout:
+        rpm_data = json.load(fout)
+
+    if request.client.host not in rpm_data:
+        rpm_data[request.client.host] = 0
+    
+    rpm_data[request.client.host] += 1
+    with open(current_user_request_by_ip_file, "w") as fout:
+        json.dump(rpm_data, fout)
+                
+    if rpm_data[request.client.host] >= RPM_LIMIT:
+        state.skip_next = True
+        logger.info(f"######################### IP: {request.client.host} #########################")
+        logger.info(f"######################### Requests: {rpm_data[request.client.host]} #########################")
+        ret_value = {
+            "text": "Sorry, you have reached the request limit. Please try again tomorrow.",
+            "files": []
+        }
+        return (state, state.to_gradio_chatbot(), gr.MultimodalTextbox(value=ret_value, interactive=True), None) + (disable_btn,) * 5
+    
     # text = text[:1536]  # Hard cut-off
     if image is not None:
         # text = text[:1200]  # Hard cut-off for images
@@ -474,7 +510,7 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
                     temperature = gr.Slider(
                         minimum=0.0,
                         maximum=1.0,
-                        value=0.7,
+                        value=0.5,
                         step=0.1,
                         interactive=True,
                         label="Temperature",
@@ -482,7 +518,7 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
                     top_p = gr.Slider(
                         minimum=0.0,
                         maximum=1.0,
-                        value=0.7,
+                        value=1,
                         step=0.1,
                         interactive=True,
                         label="Top P",

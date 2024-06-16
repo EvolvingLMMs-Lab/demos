@@ -23,29 +23,31 @@ def monitor_and_run():
     while True:
         gpu_utilization = get_gpu_utilization()
 
-        print(f"====================== Detecting: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())} ======================")
+        launched_process = 0
         for gpu_index, utilization in gpu_utilization.items():
+            print(f"====================== Detecting GPU {gpu_index}: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())} ======================")
             if utilization < 10 and gpu_index not in processes:
                 # GPU is mostly idle, start gpu_burn.py if it's not already running
                 print(f"Starting GPU-intensive process on GPU {gpu_index}...")
                 proc = subprocess.Popen(
-                    f"python /mnt/bn/vl-research/workspace/yhzhang/ml_envs/gpu_burn_single.py --iterations=24 --gpu_id {gpu_index}",
+                    f"python ./gpu_burn_single.py --iterations=300 --gpu_id {gpu_index}",
                     shell=True
                 )
                 processes[gpu_index] = proc
-                time.sleep(0.01)
-            elif utilization >= 10 and gpu_index in processes:
-                # GPU utilization is high, terminate gpu_burn.py if it's running
-                print(
-                    f"Terminating GPU-intensive process on GPU {gpu_index} due to high utilization."
-                )
-                processes[gpu_index].terminate()
-                del processes[gpu_index]
-            elif utilization >= 10:
-                print(f"GPU {gpu_index} is overutilized by user request.")
-                
-        print(f"====================== Finishing: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())} ======================")
-        time.sleep(5)  # Check every 10 seconds
+                launched_process += 1
+            # elif utilization >= 10 and gpu_index in processes:
+            #     # GPU utilization is high, terminate gpu_burn.py if it's running
+            #     print(
+            #         f"Terminating GPU-intensive process on GPU {gpu_index} due to high utilization."
+            #     )
+            #     processes[gpu_index].terminate()
+            #     del processes[gpu_index]
+            # elif utilization >= 10:
+            #     print(f"GPU {gpu_index} is overutilized by user request.")
+        
+
+        time.sleep(10)  # Check every 3 seconds
+        # print(f"====================== Finishing: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())} ======================")
         
         for gpu_index, utilization in gpu_utilization.items():
             if gpu_index in processes:
@@ -55,6 +57,23 @@ def monitor_and_run():
                     print(f"Error terminating process on GPU {gpu_index}: {e}")
                 del processes[gpu_index]
 
+def always_run():
+    processes = {}  # Dictionary to store subprocess PIDs for each GPU
+    gpu_utilization = get_gpu_utilization()
+
+    launched_process = 0
+    for gpu_index, utilization in gpu_utilization.items():
+        print(f"====================== Detecting GPU {gpu_index}: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())} ======================")
+        if utilization < 10 and gpu_index not in processes:
+            # GPU is mostly idle, start gpu_burn.py if it's not already running
+            print(f"Starting GPU-intensive process on GPU {gpu_index}...")
+            proc = subprocess.Popen(
+                f"python ./gpu_burn_single.py --iterations=30000000 --gpu_id {gpu_index}",
+                shell=True
+            )
+            processes[gpu_index] = proc
+            launched_process += 1
 
 if __name__ == "__main__":
     monitor_and_run()
+    # always_run()

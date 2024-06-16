@@ -43,10 +43,14 @@ async def test_concurrent(args):
                 url + "/generate",
                 {
                     "text": "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nYou are a helpful language and vision assistant. You are able to understand the visual content that the user provides, and assist the user with a variety of tasks using natural language.<|eot_id|><|start_header_id|><|start_header_id|>user<|end_header_id|>\n\n<image>\nPlease generate caption towards this image.<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n",
-                    "image_data": "https://github.com/sgl-project/sglang/blob/main/assets/logo_square.png",
+                    "image_data": "/mnt/bn/vl-research/workspace/boli01/projects/demos/sglang_codebase/examples/quick_start/images/cat.jpeg",
                     "sampling_params": {
-                        "temperature": 0,
                         "max_new_tokens": 1024,
+                        "temperature": 0,
+                        "top_p": 1.0,
+                        "presence_penalty": 2,
+                        "frequency_penalty": 2,
+                        "stop": "<|eot_id|>",
                     },
                 },
             )
@@ -55,10 +59,6 @@ async def test_concurrent(args):
     rets = await asyncio.gather(*response)
     for ret in rets:
         print(ret["text"])
-
-
-from PIL import Image
-import base64
 
 
 def test_streaming(args):
@@ -73,7 +73,7 @@ def test_streaming(args):
             "frequency_penalty": 2,
             "stop": "<|eot_id|>",
         },
-        "image_data": "https://github.com/sgl-project/sglang/blob/main/assets/logo_square.png",
+        "image_data": "/mnt/bn/vl-research/workspace/boli01/projects/demos/sglang_codebase/examples/quick_start/images/cat.jpeg",
         "stream": True,
     }
     response = requests.post(
@@ -94,7 +94,7 @@ def test_streaming(args):
             prev = len(output)
     print("")
 
-
+# CUDA_VISIBLE_DEVICES=0,1,2,3 python -m sglang.launch_server --model-path lmms-lab/llama3-llava-next-8b --tokenizer-path lmms-lab/llama3-llava-next-8b-tokenizer --port=30000 --host="127.0.0.1" --tp-size=4
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", type=str, default="http://127.0.0.1")
