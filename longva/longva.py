@@ -2,6 +2,8 @@ import copy
 import logging
 import math
 import warnings
+import json
+
 from datetime import timedelta
 from typing import List, Optional, Union, Tuple
 
@@ -13,6 +15,9 @@ from accelerate.state import AcceleratorState
 from decord import VideoReader, cpu
 from packaging import version
 from transformers import AutoConfig
+
+from transformers import TextIteratorStreamer
+from threading import Thread
 
 torch.backends.cuda.matmul.allow_tf32 = True
 
@@ -57,7 +62,7 @@ class LongVA:
         model_name: Optional[str] = None,
         attn_implementation: Optional[str] = best_fit_attn_implementation,
         device_map: Optional[str] = "cuda:0",
-        conv_template: Optional[str] = "vicuna_v1",
+        conv_template: Optional[str] = "qwen_1_5",
         use_cache: Optional[bool] = True,
         truncate_context: Optional[
             bool
@@ -325,21 +330,17 @@ class LongVA:
         visuals = requests["visuals"]
         context = requests["context"]
         task_type = requests["task_type"]
-        
+
         # encode, pad, and truncate contexts for this batch
         if task_type == "image":  # For image task
-            image_tensor = process_images(
-                visuals, self._image_processor, self._config
-            )
+            image_tensor = process_images(visuals, self._image_processor, self._config)
             if type(image_tensor) is list:
                 image_tensor = [
                     _image.to(dtype=torch.float16, device=self.device)
                     for _image in image_tensor
                 ]
             else:
-                image_tensor = image_tensor.to(
-                    dtype=torch.float16, device=self.device
-                )
+                image_tensor = image_tensor.to(dtype=torch.float16, device=self.device)
 
         elif task_type == "video":  # For video task
             image_tensor = []
@@ -463,16 +464,223 @@ class LongVA:
         except Exception as e:
             raise e
 
-        response = text_outputs[0].strip()        
+        response = text_outputs[0].strip()
         return response
+
+    def stream_generate_until(self, requests: dict, gen_kwargs: dict) -> List[str]:
+
+        question_input = []
+
+        visuals = requests["visuals"]
+        context = requests["context"]
+        task_type = requests["task_type"]
+
+        # encode, pad, and truncate contexts for this batch
+        if task_type == "image":  # For image task
+            image_tensor = process_images(visuals, self._image_processor, self._config)
+            if type(image_tensor) is list:
+                image_tensor = [
+                    _image.to(dtype=torch.float16, device=self.device)
+                    for _image in image_tensor
+                ]
+            else:
+                image_tensor = image_tensor.to(dtype=torch.float16, device=self.device)
+
+        elif task_type == "video":  # For video task
+            image_tensor = []
+            max_frames = gen_kwargs.get("sample_frames", self.max_frames_num)
+            if "sample_frames" in gen_kwargs:
+                gen_kwargs.pop("sample_frames")
+                
+            try:
+                if self.video_decode_backend == "decord":
+                    frames = self.load_video(visuals, max_frames)
+
+                frames = (
+                    self._image_processor.preprocess(frames, return_tensors="pt")[
+                        "pixel_values"
+                    ]
+                    .half()
+                    .cuda()
+                )
+                image_tensor.append(frames)
+            except Exception as e:
+                eval_logger.error(f"Error {e} in loading video")
+                image_tensor = None
+
+            task_type = "video"
+
+        if (
+            image_tensor is not None
+            and len(image_tensor) != 0
+            and DEFAULT_IMAGE_TOKEN not in context
+        ):
+            """
+            Three senarios:
+            1. No image, and there for, no image token should be added.
+            2. image token is already specified in the context, so we don't need to add it.
+            3. image token is not specified in the context and there is image inputs, so we need to add it. In this case, we add the image token at the beginning of the context and add a new line.
+            4. For video tasks, we could add a <image> token or multiple <image> tokens for each frame in the context. This depends on the training strategy and should balance in test to decide which is better
+            """
+            if task_type == "image":
+                image_tokens = (
+                    [DEFAULT_IMAGE_TOKEN] * len(visuals)
+                    if isinstance(visuals, list)
+                    else [DEFAULT_IMAGE_TOKEN]
+                )
+            elif task_type == "video":
+                image_tokens = (
+                    [DEFAULT_IMAGE_TOKEN] * len(frames)
+                    if self.token_strategy == "multiple"
+                    else [DEFAULT_IMAGE_TOKEN]
+                )
+
+            image_tokens = " ".join(image_tokens)
+            question = image_tokens + "\n" + context
+        else:
+            question = context
+
+        # This is much safer for llama3, as we now have some object type in it
+        if "llama_3" in self.conv_template:
+            conv = copy.deepcopy(conv_templates[self.conv_template])
+        else:
+            conv = conv_templates[self.conv_template].copy()
+        conv.append_message(conv.roles[0], question)
+        conv.append_message(conv.roles[1], None)
+        prompt_question = conv.get_prompt()
+        question_input.append(prompt_question)
+
+        # preconfigure gen_kwargs with defaults
+        if "max_new_tokens" not in gen_kwargs:
+            gen_kwargs["max_new_tokens"] = 1024
+        if "temperature" not in gen_kwargs:
+            gen_kwargs["temperature"] = 0
+        if "do_sample" not in gen_kwargs:
+            gen_kwargs["do_sample"] = False
+        if "top_p" not in gen_kwargs:
+            gen_kwargs["top_p"] = None
+        if "num_beams" not in gen_kwargs:
+            gen_kwargs["num_beams"] = 1
+
+        input_ids_list = [
+            tokenizer_image_token(
+                prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt"
+            )
+            for prompt in question_input
+        ]
+        pad_token_ids = (
+            self.tokenizer.pad_token_id
+            if self.tokenizer.pad_token_id is not None
+            else self.tokenizer.eos_token_id
+        )
+        input_ids = self.pad_sequence(
+            input_ids_list, batch_first=True, padding_value=pad_token_ids
+        ).to(self.device)
+        attention_masks = input_ids.ne(pad_token_ids).to(self.device)
+
+        stop_str = conv.sep if conv.sep_style != SeparatorStyle.TWO else conv.sep2
+        keywords = [stop_str]
+        stopping_criteria = KeywordsStoppingCriteria(
+            keywords, self.tokenizer, input_ids
+        )
+        if task_type == "image":
+            gen_kwargs["image_sizes"] = [
+                visual.size for visual in visuals
+            ]  # (width, height)
+        elif task_type == "video":
+            gen_kwargs["modalities"] = ["video"]
+            gen_kwargs["stopping_criteria"] = [stopping_criteria]
+            self._config.mm_spatial_pool_stride = self.mm_spatial_pool_stride
+            self._config.mm_spatial_pool_mode = self.mm_spatial_pool_mode
+
+        # These steps are not in LLaVA's original code, but are necessary for generation to work
+        # TODO: attention to this major generation step...
+        if "image_aspect_ratio" in gen_kwargs.keys():
+            gen_kwargs.pop("image_aspect_ratio")
+
+        max_context_length = getattr(self.model.config, "max_position_embeddings", 2048)
+        num_image_tokens = (
+            question.count(DEFAULT_IMAGE_TOKEN)
+            * self.model.get_vision_tower().num_patches
+        )
+
+        streamer = TextIteratorStreamer(
+            self.tokenizer, skip_prompt=True, skip_special_tokens=True, timeout=15
+        )
+
+        gen_kwargs["max_new_tokens"] = min(
+            gen_kwargs["max_new_tokens"],
+            max_context_length - input_ids.shape[-1] - num_image_tokens,
+        )
+
+        if gen_kwargs["max_new_tokens"] < 1:
+            yield json.dumps(
+                {
+                    "text": question
+                    + "Exceeds max token length. Please start a new conversation, thanks.",
+                    "error_code": 0,
+                }
+            ).encode() + b"\0"
+            return
+
+        print(f"gen_kwargs: {gen_kwargs}")
+        try:
+            thread = Thread(
+                target=self.model.generate,
+                kwargs=dict(
+                    inputs=input_ids,
+                    attention_mask=attention_masks,
+                    pad_token_id=pad_token_ids,
+                    images=image_tensor,
+                    use_cache=self.use_cache,
+                    streamer=streamer,
+                    **gen_kwargs,
+                ),
+            )
+            thread.start()
+            generated_text = ""
+            for new_text in streamer:
+                generated_text += new_text
+                if generated_text.endswith(stop_str):
+                    generated_text = generated_text[: -len(stop_str)]
+                yield json.dumps(
+                    {"text": generated_text, "error_code": 0}
+                ).encode() + b"\0"
+            # with torch.inference_mode():
+            #     cont = self.model.generate(
+            #         input_ids,
+            #         attention_mask=attention_masks,
+            #         pad_token_id=pad_token_ids,
+            #         images=image_tensor,
+            #         use_cache=self.use_cache,
+            #         **gen_kwargs,
+            #     )
+
+            # text_outputs = self.tokenizer.batch_decode(cont, skip_special_tokens=True)
+        except Exception as e:
+            raise e
 
 
 if __name__ == "__main__":
     model = LongVA()
-    input_image = Image.open("/mnt/bn/vl-research/workspace/boli01/projects/demos/test.jpg")
-    input_context = "How many animals are there in the image?"
-    input_visuals = [input_image]
+    input_visual = Image.open(
+        "/mnt/bn/vl-research/workspace/boli01/projects/demos/assets/otter_books.jpg"
+    ).convert("RGB")
+    # input_image = "/mnt/bn/vl-research/workspace/boli01/projects/demos/assets/dc_demo.mp4"
+    input_context = "What is the main character in the video?"
+    input_visuals = [input_visual]
     task_type = "image"
     gen_kwargs = {"max_new_tokens": 1024, "temperature": 0, "do_sample": False}
-    requests = {"visuals": input_visuals, "context": input_context, "task_type": task_type}
-    print(model.generate_until(requests, gen_kwargs))
+    requests = {
+        "visuals": input_visuals,
+        "context": input_context,
+        "task_type": task_type,
+    }
+    try:
+        prev = 0
+        for x in model.stream_generate_until(requests, gen_kwargs):
+            output = json.loads(x.decode("utf-8").strip("\0"))["text"].strip()
+            print(output[prev:], end="", flush=True)
+            prev = len(output)
+    except Exception as e:
+        print(e)

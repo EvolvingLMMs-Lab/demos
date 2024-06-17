@@ -9,6 +9,10 @@ title_markdown = """
 # [LongVA Multimodal Chat](https://lmm-lab.github.io/LongVA/)
 """
 
+subtitle_markdown = """
+This is a research preview of LongVA, a multimodal chat system that leverages Large Language Models (LLMs) and multimodal models to enable more interactive and multimodal conversations.
+"""
+
 block_css = """
 #buttons button {
     min-width: min(120px,100%);
@@ -32,13 +36,6 @@ The service is a research preview intended for non-commercial use only, subject 
 bibtext = """
 ## Citation
 ```
-@misc{li2024llavanext-strong,
-    title={LLaVA-NeXT: Stronger LLMs Supercharge Multimodal Capabilities in the Wild},
-    url={https://llava-vl.github.io/blog/2024-05-10-llava-next-stronger-llms/},
-    author={Li, Bo and Zhang, Kaichen and Zhang, Hao and Guo, Dong and Zhang, Renrui and Li, Feng and Zhang, Yuanhan and Liu, Ziwei and Li, Chunyuan},
-    month={May},
-    year={2024}
-}
 ```
 """
 
