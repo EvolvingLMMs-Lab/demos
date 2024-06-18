@@ -59,10 +59,12 @@ def http_bot(
         visual_count = 0
         conv_count = 0
         prev_conv = []
-        for x in state:
+        last_visual_index = -1
+        for idx, x in enumerate(state):
             if type(x[0]) == tuple:
                 visual_count += 1
                 image_path = x[0][0]
+                last_visual_index = idx
             elif type(x[0]) == str and type(x[1]) == str:
                 conv_count += 1
                 prev_conv.append(x)
@@ -76,14 +78,18 @@ def http_bot(
             image_path = ""
             task_type = "text"
         elif visual_count > 1:
-            state[-1][1] = "Please provide only one visual input."
-            yield state
+            print(f"Visual count: {visual_count}")
+            state = state[last_visual_index:]
+            if video_input is not None:
+                task_type = "video"
+            else:
+                task_type = "image"
 
         prompt = state[-1][0]
 
         if task_type != "text" and not os.path.exists(image_path):
             state[-1][1] = "The conversation is not correctly processed. Please try again."
-            yield state
+            return state
 
         if task_type != "text":
             print(f"Processing Visual: {image_path}")

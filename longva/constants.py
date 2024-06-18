@@ -46,15 +46,16 @@ bibtext = """
 ```
 """
 
+PARENT_FOLDER = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ################## BACKEND ##################
 os.environ["GRADIO_EXAMPLES_CACHE"] = (
-    "/home/boli/demos/cache"
+    f"{PARENT_FOLDER}/cache"
 )
 os.environ["GRADIO_TEMP_DIR"] = (
-    "/home/boli/demos/cache"
+    f"{PARENT_FOLDER}/cache"
 )
 multimodal_folder_path = (
-    "/home/boli/demos/cache/user_logs/medias"
+    f"{PARENT_FOLDER}/cache/user_logs/medias"
 )
 
 if not os.path.exists(multimodal_folder_path):
