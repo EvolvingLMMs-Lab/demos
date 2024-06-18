@@ -41,13 +41,13 @@ bibtext = """
 
 ################## BACKEND ##################
 os.environ["GRADIO_EXAMPLES_CACHE"] = (
-    "/mnt/bn/vl-research/workspace/boli01/projects/demos/cache"
+    "/home/boli/demos/cache"
 )
 os.environ["GRADIO_TEMP_DIR"] = (
-    "/mnt/bn/vl-research/workspace/boli01/projects/demos/cache"
+    "/home/boli/demos/cache"
 )
 multimodal_folder_path = (
-    "/mnt/bn/vl-research/workspace/boli01/projects/demos/cache/user_logs/medias"
+    "/home/boli/demos/cache/user_logs/medias"
 )
 
 if not os.path.exists(multimodal_folder_path):
