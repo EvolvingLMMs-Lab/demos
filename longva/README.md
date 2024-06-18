@@ -1,5 +1,5 @@
 # Installation
 
-pip install -e "LongLLaVA/pyproject.toml"
+pip install -e "LongLLaVA/.[train]"
 
 pip install -U gradio
