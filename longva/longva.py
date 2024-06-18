@@ -475,8 +475,11 @@ class LongVA:
         context = requests["context"]
         task_type = requests["task_type"]
 
+        if task_type == "text":
+            image_tensor = None
+
         # encode, pad, and truncate contexts for this batch
-        if task_type == "image":  # For image task
+        elif task_type == "image":  # For image task
             image_tensor = process_images(visuals, self._image_processor, self._config)
             if type(image_tensor) is list:
                 image_tensor = [
@@ -545,8 +548,14 @@ class LongVA:
             conv = copy.deepcopy(conv_templates[self.conv_template])
         else:
             conv = conv_templates[self.conv_template].copy()
+
+        for prev_conv in requests["prev_conv"]:
+            conv.append_message(conv.roles[0], prev_conv[0])
+            conv.append_message(conv.roles[1], prev_conv[1])
+            
         conv.append_message(conv.roles[0], question)
         conv.append_message(conv.roles[1], None)
+        
         prompt_question = conv.get_prompt()
         question_input.append(prompt_question)
 
@@ -668,8 +677,8 @@ if __name__ == "__main__":
     ).convert("RGB")
     # input_image = "/mnt/bn/vl-research/workspace/boli01/projects/demos/assets/dc_demo.mp4"
     input_context = "What is the main character in the video?"
-    input_visuals = [input_visual]
-    task_type = "image"
+    input_visuals = []
+    task_type = "text"
     gen_kwargs = {"max_new_tokens": 1024, "temperature": 0, "do_sample": False}
     requests = {
         "visuals": input_visuals,

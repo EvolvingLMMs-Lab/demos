@@ -10,7 +10,7 @@ title_markdown = """
 """
 
 subtitle_markdown = """
-This is a research preview of LongVA, a multimodal chat system that leverages Large Language Models (LLMs) and multimodal models to enable more interactive and multimodal conversations.
+### This is our research preview of LongVA, a multimodal model that is capable of accurately retrieving visual information from 2000 frames or more than 200K visual tokens.
 """
 
 block_css = """
@@ -36,6 +36,13 @@ The service is a research preview intended for non-commercial use only, subject 
 bibtext = """
 ## Citation
 ```
+@misc{zhang2024longva,
+    title={LongVA: Long Context Transfer from Language to Vision},
+    url={https://lmms-lab.github.io/posts/longva/},
+    author={Zhang, Peiyuan and Zhang, Kaichen and Li, Bo and Zeng, Guangtao and Yang, Jingkang and Zhang, Yuanhan and Li, Chunyuan and Liu, Ziwei},
+    month={June},
+    year={2024}
+}
 ```
 """
 
