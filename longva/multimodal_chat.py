@@ -378,4 +378,4 @@ if __name__ == "__main__":
         gr.Markdown(learn_more_markdown)
 
     demo.queue(max_size=128)
-    demo.launch(max_threads=8, share=True)
+    demo.launch(max_threads=8, share=False, server_port=8000)
