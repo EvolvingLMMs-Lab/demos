@@ -56,20 +56,41 @@ def http_bot(
     top_p=1.0,
 ):
     try:
-        if len(state) > 2:
-            state = state[-2:]
+        visual_count = 0
+        conv_count = 0
+        prev_conv = []
+        for x in state:
+            if type(x[0]) == tuple:
+                visual_count += 1
+                image_path = x[0][0]
+            elif type(x[0]) == str and type(x[1]) == str:
+                conv_count += 1
+                prev_conv.append(x)
 
-        if len(state) == 1 and video_input is not None:
+        if visual_count == 1 and video_input is not None:
             image_path = video_input
-        else:
-            image_path = state[-2][0][0]
+            task_type = "video"
+        elif visual_count == 1 and video_input is None and type(state[0][0]) == tuple:
+            task_type = "image"
+        elif visual_count == 0:
+            image_path = ""
+            task_type = "text"
+        elif visual_count > 1:
+            state[-1][1] = "Please provide only one visual input."
+            yield state
 
         prompt = state[-1][0]
 
-        if not os.path.exists(image_path):
-            return "Image is not correctly uploaded and processed. Please try again."
+        if task_type != "text" and not os.path.exists(image_path):
+            state[-1][1] = "The conversation is not correctly processed. Please try again."
+            yield state
 
-        print(f"Processing Visual: {image_path}")
+        if task_type != "text":
+            print(f"Processing Visual: {image_path}")
+            print(f"Processing Question: {prompt}")
+        else:
+            print(f"Processing Question (text): {prompt}")
+
         try:
             gen_kwargs = {
                 "max_new_tokens": max_new_tokens,
@@ -79,19 +100,27 @@ def http_bot(
             }
             state[-1][1] = ""
 
-            if image_path.split(".")[-1] in [
-                "png",
-                "jpg",
-                "jpeg",
-                "webp",
-                "bmp",
-                "gif",
-            ]:
+            if task_type == "text":
+                request = {
+                    "prev_conv": prev_conv,
+                    "visuals": [],
+                    "context": prompt,
+                    "task_type": task_type,
+                }
+                prev = 0
+                for x in longva.stream_generate_until(request, gen_kwargs):
+                    output = json.loads(x.decode("utf-8").strip("\0"))["text"].strip()
+                    print(output[prev:], end="", flush=True)
+                    state[-1][1] += output[prev:]
+                    prev = len(output)
+                    yield state
+
+            elif image_path.split(".")[-1] in ["png", "jpg", "jpeg", "webp", "bmp", "gif"]:
                 task_type = "image"
                 # stream output
-                print(f"Loading image: {image_path}")
                 image = Image.open(image_path).convert("RGB")
                 request = {
+                    "prev_conv": prev_conv,
                     "visuals": [image],
                     "context": prompt,
                     "task_type": task_type,
@@ -105,19 +134,10 @@ def http_bot(
                     prev = len(output)
                     yield state
 
-            elif image_path.split(".")[-1] in [
-                "mp4",
-                "mov",
-                "avi",
-                "mp3",
-                "wav",
-                "mpga",
-                "mpg",
-                "mpeg",
-            ]:
+            elif image_path.split(".")[-1] in ["mp4", "mov", "avi", "mp3", "wav", "mpga", "mpg", "mpeg"]:
                 task_type = "video"
-                print(f"Loading video: {image_path}")
                 request = {
+                    "prev_conv": prev_conv,
                     "visuals": [image_path],
                     "context": prompt,
                     "task_type": task_type,
@@ -133,9 +153,7 @@ def http_bot(
                     yield state
 
             else:
-                state[-1][
-                    1
-                ] = "Image format is not supported. Please upload a valid image file."
+                state[-1][1] = "Image format is not supported. Please upload a valid image file."
                 yield state
         except Exception as e:
             raise e
@@ -326,9 +344,7 @@ if __name__ == "__main__":
                 bot_msg.then(
                     lambda: gr.MultimodalTextbox(interactive=True), None, [chat_input]
                 )
-                bot_msg.then(
-                    lambda: video, None, [video]
-                )
+                bot_msg.then(lambda: video, None, [video])
 
                 chatbot.like(print_like_dislike, None, None)
 
