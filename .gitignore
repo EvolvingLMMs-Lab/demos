@@ -4,4 +4,3 @@ __pycache__
 *.json
 *.log
 logs/
-sglang_codebase/
