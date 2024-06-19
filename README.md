@@ -6,12 +6,6 @@ sdk_version: 4.29.0
 ---
 # Installation
 
-<!-- curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb &&  -->
-
-sudo dpkg -i llava_demo.deb && 
-
-sudo cloudflared service install eyJhIjoiZjMyZGYyNTNmMzVjMzA5ODBjZTMyMGM0MTUyZjZjZmEiLCJ0IjoiYTM5MzMzYWYtYTY3OC00MThlLWIyZWYtZDQzNmVkNDRhMzc0IiwicyI6Ik1qZ3laalk1TnpRdE1EQmlNeTAwWkRjM0xXRTFaR1F0WXpCbU9XSTNOelZtTmpNMyJ9
-
 prepare_demo;
 build_llava;
 
