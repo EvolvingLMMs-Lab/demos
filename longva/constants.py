@@ -13,6 +13,81 @@ subtitle_markdown = """
 ### This is our research preview of LongVA, a multimodal model that is capable of accurately retrieving visual information from 2000 frames or more than 200K visual tokens.
 """
 
+html_header = """
+<style>
+/* Existing Styles for Larger Screens */
+.header-container {
+  display: flex;
+  justify-content: left;
+  align-items: center;
+  text-align: left;
+  background: linear-gradient(45deg, rgba(195, 253, 245, 1), rgba(255, 0, 80, 0.3));
+  border-radius: 10px;
+  box-shadow: 0 8px 16px 0 rgba(0,0,0,0.1);
+  padding: 10px 20px; /* Added padding */
+}
+
+.header-container img {
+  max-width: 80px;
+  height: auto;
+  border-radius: 10px;
+}
+
+.header-container a {
+  color: black; /* Ensure text color is always black */
+  text-decoration: none;
+}
+
+/* Responsive adjustments for screens less than 768px wide */
+@media (max-width: 768px) {
+  .header-container {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 10px 15px; /* Adjust padding for smaller screens */
+  }
+
+  .header-container img {
+    max-width: 60px; /* Adjust image size for smaller screens */
+  }
+
+  .header-container h2, .header-container h5 {
+  color: black; /* Ensure text color is always black */
+  text-decoration: none;
+    text-align: center; /* Center text on small screens */
+    margin-top: 5px; /* Add top margin for better spacing after stacking */
+  }
+
+  .header-container h2 {
+  color: black; /* Ensure text color is always black */
+  text-decoration: none;
+    font-size: 16px; /* Smaller font size for the title on mobile */
+  }
+
+  .header-container h5 {
+  color: black; /* Ensure text color is always black */
+  text-decoration: none;
+    font-size: 12px; /* Smaller font size for the subtitle on mobile */
+  }
+
+  .header-container a {
+  color: black; /* Ensure text color is always black */
+  text-decoration: none;
+  }
+}
+</style>
+
+<div class="header-container">
+  <a href="https://lmms-lab.github.io/posts/lmms-eval-0.2/" style="margin-right: 20px; text-decoration: none; display: flex; align-items: center;">
+    <img src="https://i.postimg.cc/JhT7zPj3/assistant-logo.png" alt="LLaVA-NeXT">
+  </a>
+  <div>
+    <h2><a href="https://lmms-lab.github.io/posts/lmms-eval-0.2/">Long Context Transfer from Language to Vision</a></h2>
+    <h5><a href="https://github.com/LLaVA-VL/LLaVA-NeXT">Github</a> | <a href="https://huggingface.co/collections/lmms-lab/llava-next-6623288e2d61edba3ddbf5ff">Huggingface</a> | <a href="https://lmms-lab.github.io/posts/lmms-eval-0.2/">Blog</a> | <a href="https://lmms-lab.github.io/posts/lmms-eval-0.2/">ArXiv Paper</a></h5>
+    <h5>This is our research preview of LongVA, a multimodal model that is capable of accurately retrieving visual information from 2000 frames or more than 200K visual tokens.</h5>
+  </div>
+</div>
+"""
+
 block_css = """
 #buttons button {
     min-width: min(120px,100%);

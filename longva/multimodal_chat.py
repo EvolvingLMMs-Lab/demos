@@ -10,6 +10,7 @@ from theme_dropdown import create_theme_dropdown  # noqa: F401
 from constants import (
     title_markdown,
     subtitle_markdown,
+    html_header,
     tos_markdown,
     learn_more_markdown,
     bibtext,
@@ -214,8 +215,9 @@ if __name__ == "__main__":
         title="LongVA Multimodal Chat from LMMs-Lab",
         css=".message-wrap.svelte-1lcyrx4>div.svelte-1lcyrx4  img {min-width: 50px}",
     ) as demo:
-        gr.Markdown(title_markdown)
-        gr.Markdown(subtitle_markdown)
+        gr.HTML(html_header)
+        # gr.Markdown(title_markdown)
+        # gr.Markdown(subtitle_markdown)
 
         models = ["LongVA-7B"]
         with gr.Row():
