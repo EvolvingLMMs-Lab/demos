@@ -19,7 +19,7 @@ import PIL
 import shortuuid
 from black_magic_utils import process_images
 
-logger = build_logger("gradio_web_server", "./logs/gradio_web_server.log")
+logger = build_logger("gradio_web_server", "/home/boli/demos/logs/gradio_web_server.log")
 
 headers = {"User-Agent": "LLaVA-NeXT Client"}
 
@@ -724,7 +724,7 @@ if __name__ == "__main__":
     logger.info(args)
     demo = build_demo(args.embed, concurrency_count=args.concurrency_count)
     demo.queue(api_open=False).launch(
-        server_name=args.host,
+        # server_name=args.host,
         server_port=args.port,
         share=args.share,
         favicon_path=f"{PARENT_FOLDER}/assets/favicon.ico",
