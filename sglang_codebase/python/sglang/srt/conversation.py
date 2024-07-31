@@ -1,10 +1,12 @@
+"""Conversation templates."""
+
 # Adapted from
 # https://github.com/lm-sys/FastChat/blob/main/fastchat/conversation.py
 import dataclasses
 from enum import IntEnum, auto
 from typing import Dict, List, Optional, Tuple, Union
 
-from sglang.srt.managers.openai_protocol import ChatCompletionRequest
+from sglang.srt.openai_protocol import ChatCompletionRequest
 
 
 class SeparatorStyle(IntEnum):
@@ -121,6 +123,20 @@ class Conversation:
                 else:
                     ret += role + ":"
             return ret
+        elif self.sep_style == SeparatorStyle.LLAMA3:
+            ret = "<|begin_of_text|>"
+            if self.system_message:
+                ret += system_prompt
+            else:
+                ret += ""
+            for i, (role, message) in enumerate(self.messages):
+                if message:
+                    ret += f"<|start_header_id|>{role}<|end_header_id|>\n\n"
+                    ret += f"{message.strip()}<|eot_id|>"
+                else:
+                    ret += f"<|start_header_id|>{role}<|end_header_id|>\n\n"
+            # print(ret)
+            return ret
         elif self.sep_style == SeparatorStyle.LLAMA2:
             seps = [self.sep, self.sep2]
             if self.system_message:
@@ -136,20 +152,6 @@ class Conversation:
                         ret += tag + " " + message + seps[i % 2]
                 else:
                     ret += tag
-            return ret
-        elif self.sep_style == SeparatorStyle.LLAMA3:
-            ret = "<|begin_of_text|>"
-            if self.system_message:
-                ret += system_prompt
-            else:
-                ret += ""
-            for i, (role, message) in enumerate(self.messages):
-                if message:
-                    ret += f"<|start_header_id|>{role}<|end_header_id|>\n\n"
-                    ret += f"{message.strip()}<|eot_id|>"
-                else:
-                    ret += f"<|start_header_id|>{role}<|end_header_id|>\n\n"
-            print(ret)
             return ret
         elif self.sep_style == SeparatorStyle.CHATGLM:
             # source: https://huggingface.co/THUDM/chatglm-6b/blob/1d240ba371910e9282298d4592532d7f0f3e9f3e/modeling_chatglm.py#L1302-L1308
@@ -176,6 +178,7 @@ class Conversation:
                     ret += role + "\n" + message + self.sep + "\n"
                 else:
                     ret += role + "\n"
+            # print(ret)
             return ret
         elif self.sep_style == SeparatorStyle.CHATGLM3:
             ret = ""
@@ -377,12 +380,23 @@ def generate_chat_conv(
                 conv.append_message(conv.roles[0], message.content)
             else:
                 real_content = ""
+                # calculate number of image_url
+                num_image_url = 0
+                for content in message.content:
+                    if content.type == "image_url":
+                        num_image_url += 1
+                if num_image_url > 1:
+                    image_token = "<image>"
+                else:
+                    image_token = "<image>\n"
                 for content in message.content:
                     if content.type == "text":
+                        if num_image_url > 16:
+                            real_content += "\n" # for video
                         real_content += content.text
                     elif content.type == "image_url":
                         # NOTE: Only works for llava
-                        real_content += "<image>\n"
+                        real_content += image_token
                         conv.append_image(content.image_url.url)
                 conv.append_message(conv.roles[0], real_content)
         elif msg_role == "assistant":
@@ -415,11 +429,46 @@ register_conv_template(
     Conversation(
         name="chatml",
         system_template="<|im_start|>system\n{system_message}",
-        system_message="You are an AI assistant.",
+        system_message="You are a helpful assistant.",
         roles=("<|im_start|>user", "<|im_start|>assistant"),
         sep_style=SeparatorStyle.CHATML,
         sep="<|im_end|>",
         stop_str=["<|endoftext|>", "<|im_end|>"],
+    )
+)
+
+register_conv_template(
+    Conversation(
+        name="chatml-llava",
+        system_template="<|im_start|>system\n{system_message}",
+        system_message="You are a helpful assistant.",
+        roles=("<|im_start|>user", "<|im_start|>assistant"),
+        sep_style=SeparatorStyle.CHATML,
+        sep="<|im_end|>",
+        stop_str=["<|endoftext|>", "<|im_end|>"],
+    )
+)
+
+# conv_qwen = Conversation(
+#     system="""<|im_start|>system
+# You are a helpful assistant.""",
+#     roles=("<|im_start|>user", "<|im_start|>assistant"),
+#     version="qwen",
+#     messages=[],
+#     offset=0,
+#     sep_style=SeparatorStyle.CHATML,
+#     sep="<|im_end|>",
+# )
+
+register_conv_template(
+    Conversation(
+        name="vicuna_v1.1",
+        system_message="A chat between a curious user and an artificial intelligence assistant. "
+        "The assistant gives helpful, detailed, and polite answers to the user's questions.",
+        roles=("USER", "ASSISTANT"),
+        sep_style=SeparatorStyle.ADD_COLON_TWO,
+        sep=" ",
+        sep2="</s>",
     )
 )
 
@@ -432,17 +481,5 @@ register_conv_template(
         sep_style=SeparatorStyle.LLAMA3,
         sep="",
         stop_str=["<|end_of_text|>", "<|eot_id|>"],
-    )
-)
-
-register_conv_template(
-    Conversation(
-        name="vicuna_v1.1",
-        system_message="A chat between a curious user and an artificial intelligence assistant. "
-        "The assistant gives helpful, detailed, and polite answers to the user's questions.",
-        roles=("USER", "ASSISTANT"),
-        sep_style=SeparatorStyle.ADD_COLON_TWO,
-        sep=" ",
-        sep2="</s>",
     )
 )

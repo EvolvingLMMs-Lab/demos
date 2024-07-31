@@ -1,9 +1,8 @@
 """
 Usage: python3 srt_example_llava.py
 """
-
 import sglang as sgl
-import torch.multiprocessing as mp
+
 
 @sgl.function
 def image_qa(s, image_path, question):
@@ -13,8 +12,9 @@ def image_qa(s, image_path, question):
 
 def single():
     state = image_qa.run(
-        image_path="images/cat.jpeg", question="What is this?", max_new_tokens=64
-    )
+        image_path="images/cat.jpeg",
+        question="What is this?",
+        max_new_tokens=128)
     print(state["answer"], "\n")
 
 
@@ -23,8 +23,7 @@ def stream():
         image_path="images/cat.jpeg",
         question="What is this?",
         max_new_tokens=64,
-        stream=True,
-    )
+        stream=True)
 
     for out in state.text_iter("answer"):
         print(out, end="", flush=True)
@@ -34,21 +33,18 @@ def stream():
 def batch():
     states = image_qa.run_batch(
         [
-            {"image_path": "images/cat.jpeg", "question": "What is this?"},
-            {"image_path": "images/dog.jpeg", "question": "What is this?"},
+            {"image_path": "images/cat.jpeg", "question":"What is this?"},
+            {"image_path": "images/dog.jpeg", "question":"What is this?"},
         ],
-        max_new_tokens=64,
+        max_new_tokens=128,
     )
     for s in states:
         print(s["answer"], "\n")
 
 
 if __name__ == "__main__":
-    mp.set_start_method('spawn')
-    runtime = sgl.Runtime(
-        model_path="liuhaotian/llava-v1.6-mistral-7b",
-        tokenizer_path="lmms-lab/llava-mistral-7b-tokenizer",
-    )
+    runtime = sgl.Runtime(model_path="liuhaotian/llava-v1.6-vicuna-7b",
+                          tokenizer_path="llava-hf/llava-1.5-7b-hf")
     sgl.set_default_backend(runtime)
     print(f"chat template: {runtime.endpoint.chat_template.name}")
 
@@ -61,11 +57,11 @@ if __name__ == "__main__":
     single()
 
     # Stream output
-    # print("\n========== stream ==========\n")
-    # stream()
+    print("\n========== stream ==========\n")
+    stream()
 
-    # # Run a batch of requests
-    # print("\n========== batch ==========\n")
-    # batch()
+    # Run a batch of requests
+    print("\n========== batch ==========\n")
+    batch()
 
     runtime.shutdown()

@@ -23,6 +23,10 @@ class SglSamplingParams:
     frequency_penalty: float = 0.0
     presence_penalty: float = 0.0
     ignore_eos: bool = False
+    return_logprob: Optional[bool] = None
+    logprob_start_len: Optional[int] = None,
+    top_logprobs_num: Optional[int] = None,
+    return_text_in_logprobs: Optional[bool] = None,
 
     # for constrained generation, not included in to_xxx_kwargs
     dtype: Optional[str] = None
@@ -37,6 +41,11 @@ class SglSamplingParams:
             self.top_k,
             self.frequency_penalty,
             self.presence_penalty,
+            self.ignore_eos,
+            self.return_logprob,
+            self.logprob_start_len,
+            self.top_logprobs_num,
+            self.return_text_in_logprobs,
         )
 
     def to_openai_kwargs(self):
@@ -82,6 +91,19 @@ class SglSamplingParams:
             "top_k": self.top_k,
         }
 
+    def to_litellm_kwargs(self):
+        if self.regex is not None:
+            warnings.warn("Regular expression is not supported in the LiteLLM backend.")
+        return {
+            "max_tokens": self.max_new_tokens,
+            "stop": self.stop or None,
+            "temperature": self.temperature,
+            "top_p": self.top_p,
+            "top_k": self.top_k,
+            "frequency_penalty": self.frequency_penalty,
+            "presence_penalty": self.presence_penalty,
+        }
+
     def to_srt_kwargs(self):
         return {
             "max_new_tokens": self.max_new_tokens,
@@ -97,9 +119,9 @@ class SglSamplingParams:
 
 
 class SglFunction:
-    def __init__(self, func, api_num_spec_tokens=None, bind_arguments=None):
+    def __init__(self, func, num_api_spec_tokens=None, bind_arguments=None):
         self.func = func
-        self.api_num_spec_tokens = api_num_spec_tokens
+        self.num_api_spec_tokens = num_api_spec_tokens
         self.bind_arguments = bind_arguments or {}
         self.pin_prefix_rid = None
 
@@ -107,6 +129,7 @@ class SglFunction:
         argspec = inspect.getfullargspec(func)
         assert argspec.args[0] == "s", 'The first argument must be "s"'
         self.arg_names = argspec.args[1:]
+        self.arg_defaults = argspec.defaults if argspec.defaults is not None else []
 
     def bind(self, **kwargs):
         assert all(key in self.arg_names for key in kwargs)
@@ -125,6 +148,10 @@ class SglFunction:
         frequency_penalty: float = 0.0,
         presence_penalty: float = 0.0,
         ignore_eos: bool = False,
+        return_logprob: Optional[bool] = None,
+        logprob_start_len: Optional[int] = None,
+        top_logprobs_num: Optional[int] = None,
+        return_text_in_logprobs: Optional[bool] = None,
         stream: bool = False,
         backend=None,
         **kwargs,
@@ -140,6 +167,10 @@ class SglFunction:
             frequency_penalty=frequency_penalty,
             presence_penalty=presence_penalty,
             ignore_eos=ignore_eos,
+            return_logprob=return_logprob,
+            logprob_start_len=logprob_start_len,
+            top_logprobs_num=top_logprobs_num,
+            return_text_in_logprobs=return_text_in_logprobs,
         )
         backend = backend or global_config.default_backend
         return run_program(self, backend, args, kwargs, default_sampling_para, stream)
@@ -156,6 +187,10 @@ class SglFunction:
         frequency_penalty: float = 0.0,
         presence_penalty: float = 0.0,
         ignore_eos: bool = False,
+        return_logprob: Optional[bool] = None,
+        logprob_start_len: Optional[int] = None,
+        top_logprobs_num: Optional[int] = None,
+        return_text_in_logprobs: Optional[bool] = None,
         backend=None,
         num_threads: Union[str, int] = "auto",
         progress_bar: bool = False,
@@ -165,7 +200,20 @@ class SglFunction:
         assert isinstance(batch_kwargs, (list, tuple))
         if len(batch_kwargs) == 0:
             return []
-        assert isinstance(batch_kwargs[0], dict)
+        if not isinstance(batch_kwargs[0], dict):
+            num_programs = len(batch_kwargs)
+            # change the list of argument values to dict of arg_name -> arg_value
+            batch_kwargs = [
+                {self.arg_names[i]: v for i, v in enumerate(arg_values)}
+                for arg_values in batch_kwargs
+                if isinstance(arg_values, (list, tuple))
+                and len(self.arg_names) - len(self.arg_defaults)
+                <= len(arg_values)
+                <= len(self.arg_names)
+            ]
+            # Ensure to raise an exception if the number of arguments mismatch
+            if len(batch_kwargs) != num_programs:
+                raise Exception("Given arguments mismatch the SGL function signature")
 
         default_sampling_para = SglSamplingParams(
             max_new_tokens=max_new_tokens,
@@ -176,6 +224,10 @@ class SglFunction:
             frequency_penalty=frequency_penalty,
             presence_penalty=presence_penalty,
             ignore_eos=ignore_eos,
+            return_logprob=return_logprob,
+            logprob_start_len=logprob_start_len,
+            top_logprobs_num=top_logprobs_num,
+            return_text_in_logprobs=return_text_in_logprobs,
         )
         backend = backend or global_config.default_backend
         return run_program_batch(
@@ -193,17 +245,11 @@ class SglFunction:
         backend = backend or global_config.default_backend
         return trace_program(self, kwargs, backend)
 
-    def pin(self, backend=None):
-        from sglang.lang.interpreter import pin_program
+    def cache(self, backend=None):
+        from sglang.lang.interpreter import cache_program
 
         backend = backend or global_config.default_backend
-        return pin_program(self, backend)
-
-    def unpin(self, backend=None):
-        from sglang.lang.interpreter import unpin_program
-
-        backend = backend or global_config.default_backend
-        return unpin_program(self, backend)
+        return cache_program(self, backend)
 
     def compile(self, *, backend=None):
         from sglang.lang.compiler import compile_func
@@ -329,28 +375,42 @@ class SglArgument(SglExpr):
 
 
 class SglImage(SglExpr):
-    def __init__(self, path):
+    def __init__(self, path: str):
         self.path = path
 
     def __repr__(self) -> str:
         return f"SglImage({self.path})"
 
 
+class SglVideo(SglExpr):
+    def __init__(self, path: str, num_frames: int):
+        self.path = path
+        self.num_frames = num_frames
+
+    def __repr__(self) -> str:
+        return f"SglVideo({self.path}, {self.num_frames})"
+
+
 class SglGen(SglExpr):
     def __init__(
         self,
-        name,
-        max_new_tokens,
-        stop,
-        temperature,
-        top_p,
-        top_k,
-        frequency_penalty,
-        presence_penalty,
-        ignore_eos,
-        dtype,
-        regex,
+        name: Optional[str] = None,
+        max_new_tokens: Optional[int] = None,
+        stop: Optional[Union[str, List[str]]] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
+        top_k: Optional[int] = None,
+        frequency_penalty: Optional[float] = None,
+        presence_penalty: Optional[float] = None,
+        ignore_eos: Optional[bool] = None,
+        return_logprob: Optional[bool] = None,
+        logprob_start_len: Optional[int] = None,
+        top_logprobs_num: Optional[int] = None,
+        return_text_in_logprobs: Optional[bool] = None,
+        dtype: Optional[type] = None,
+        regex: Optional[str] = None,
     ):
+        """Call the model to generate. See the meaning of the arguments in docs/sampling_params.md"""
         super().__init__()
         self.name = name
         self.sampling_params = SglSamplingParams(
@@ -362,6 +422,10 @@ class SglGen(SglExpr):
             frequency_penalty=frequency_penalty,
             presence_penalty=presence_penalty,
             ignore_eos=ignore_eos,
+            return_logprob=return_logprob,
+            logprob_start_len=logprob_start_len,
+            top_logprobs_num=top_logprobs_num,
+            return_text_in_logprobs=return_text_in_logprobs,
             dtype=dtype,
             regex=regex,
         )
@@ -371,7 +435,7 @@ class SglGen(SglExpr):
 
 
 class SglConstantText(SglExpr):
-    def __init__(self, value):
+    def __init__(self, value: str):
         super().__init__()
         self.value = value
 
@@ -380,7 +444,7 @@ class SglConstantText(SglExpr):
 
 
 class SglRoleBegin(SglExpr):
-    def __init__(self, role):
+    def __init__(self, role: str):
         super().__init__()
         self.role = role
 
@@ -389,7 +453,7 @@ class SglRoleBegin(SglExpr):
 
 
 class SglRoleEnd(SglExpr):
-    def __init__(self, role):
+    def __init__(self, role: str):
         super().__init__()
         self.role = role
 
@@ -398,7 +462,7 @@ class SglRoleEnd(SglExpr):
 
 
 class SglSelect(SglExpr):
-    def __init__(self, name, choices, temperature):
+    def __init__(self, name: str, choices: List[str], temperature: float):
         super().__init__()
         self.name = name
         self.choices = choices
@@ -409,7 +473,7 @@ class SglSelect(SglExpr):
 
 
 class SglFork(SglExpr):
-    def __init__(self, number, position_ids_offset=None):
+    def __init__(self, number: int, position_ids_offset=None):
         super().__init__()
         self.number = number
         self.position_ids_offset = position_ids_offset
@@ -422,7 +486,7 @@ class SglFork(SglExpr):
 
 
 class SglGetForkItem(SglExpr):
-    def __init__(self, index):
+    def __init__(self, index: int):
         super().__init__()
         self.index = index
 
@@ -431,7 +495,7 @@ class SglGetForkItem(SglExpr):
 
 
 class SglVariable(SglExpr):
-    def __init__(self, name, source):
+    def __init__(self, name: str, source):
         super().__init__()
         self.name = name
         self.source = source
@@ -441,7 +505,7 @@ class SglVariable(SglExpr):
 
 
 class SglVarScopeBegin(SglExpr):
-    def __init__(self, name):
+    def __init__(self, name: str):
         super().__init__()
         self.name = name
 
@@ -450,7 +514,7 @@ class SglVarScopeBegin(SglExpr):
 
 
 class SglVarScopeEnd(SglExpr):
-    def __init__(self, name):
+    def __init__(self, name: str):
         super().__init__()
         self.name = name
 
@@ -472,4 +536,4 @@ class SglCommitLazy(SglExpr):
         super().__init__()
 
     def __repr__(self):
-        return f"CommitLazy()"
+        return "CommitLazy()"

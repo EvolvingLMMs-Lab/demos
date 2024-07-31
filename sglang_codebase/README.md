@@ -9,9 +9,9 @@
 SGLang is a structured generation language designed for large language models (LLMs).
 It makes your interaction with LLMs faster and more controllable by co-designing the frontend language and the runtime system.
 
-The core features of SGLang include:
-- **A Flexible Front-End Language**: This allows for easy programming of LLM applications with multiple chained generation calls, advanced prompting techniques, control flow, multiple modalities, parallelism, and external interaction.
-- **A High-Performance Runtime with RadixAttention**: This feature significantly accelerates the execution of complex LLM programs by automatic KV cache reuse across multiple calls. It also supports other common techniques like continuous batching and tensor parallelism.
+The core features include:
+- **Flexible Frontend Language**: Enables easy programming of LLM applications with chained generation calls, advanced prompting, control flow, multiple modalities, parallelism, and external interactions.
+- **High-Performance Backend Runtime**: Features RadixAttention for accelerating complex LLM programs by reusing the KV cache across multiple calls. It can also serve as a standalone inference engine with all common techniques implemented (e.g., continuous batching and tensor parallelism).
 
 ## News
 - [2024/02] 🔥 SGLang enables **3x faster JSON decoding** with compressed finite state machine ([blog](https://lmsys.org/blog/2024-02-05-compressed-fsm/)).
@@ -19,30 +19,10 @@ The core features of SGLang include:
 - [2024/01] SGLang provides up to **5x faster inference** with RadixAttention ([blog](https://lmsys.org/blog/2024-01-17-sglang/)).
 
 ## Contents
-- [News](#news)
-- [Contents](#contents)
 - [Install](#install)
-  - [Method 1: With pip](#method-1-with-pip)
-  - [Method 2: From source](#method-2-from-source)
-  - [Notes](#notes)
 - [Quick Start](#quick-start)
-  - [Using Local Models](#using-local-models)
-  - [Using OpenAI Models](#using-openai-models)
-  - [More Examples](#more-examples)
 - [Frontend: Structured Generation Language (SGLang)](#frontend-structured-generation-language-sglang)
-  - [Control Flow](#control-flow)
-  - [Parallelism](#parallelism)
-  - [Multi Modality](#multi-modality)
-  - [Constrained Decoding](#constrained-decoding)
-  - [JSON Decoding](#json-decoding)
-  - [Batching](#batching)
-  - [Streaming](#streaming)
-  - [Tips and Implementation Details](#tips-and-implementation-details)
 - [Backend: SGLang Runtime (SRT)](#backend-sglang-runtime-srt)
-  - [Usage](#usage)
-  - [OpenAI Compatible API](#openai-compatible-api)
-  - [Additional Arguments](#additional-arguments)
-  - [Supported Models](#supported-models)
 - [Benchmark And Performance](#benchmark-and-performance)
 - [Roadmap](#roadmap)
 - [Citation And Acknowledgment](#citation-and-acknowledgment)
@@ -52,23 +32,33 @@ The core features of SGLang include:
 ### Method 1: With pip
 ```
 pip install "sglang[all]"
+
+# Install FlashInfer CUDA kernels
+pip install flashinfer -i https://flashinfer.ai/whl/cu121/torch2.3/
 ```
 
 ### Method 2: From source
 ```
-git clone git@github.com:sgl-project/sglang.git
+git clone https://github.com/sgl-project/sglang.git
 cd sglang
 
-pip install --upgrade pip
 pip install -e "python[all]"
+
+# Install FlashInfer CUDA kernels
+pip install flashinfer -i https://flashinfer.ai/whl/cu121/torch2.3/
 ```
 
-### Notes
-- If you are using older GPUs (NVIDIA V100, T4), please pick the correct triton compiler version to avoid some known bugs.
-  - For NVIDIA T4, please use `pip install "triton>=2.2.0"`.
-  - For NVIDIA V100, please install the [nightly](https://triton-lang.org/main/getting-started/installation.html) version.
-- If you only need to use the OpenAI backend, you can avoid installing other dependencies by using `pip install "sglang[openai]"`
+### Method 3: Using docker
+The docker images are available on Docker Hub as [lmsysorg/sglang](https://hub.docker.com/r/lmsysorg/sglang/tags).
 
+### Common Notes
+- If you see errors from the Triton compiler, please install the [Triton Nightly](https://triton-lang.org/main/getting-started/installation.html) by
+```
+pip uninstall -y triton triton-nightly
+pip install -U --index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/Triton-Nightly/pypi/simple/ triton-nightly
+```
+- If you cannot install FlashInfer, check out its [installation](https://docs.flashinfer.ai/installation.html#) page. If you still cannot install it, you can use the slower Triton kernels by adding `--disable-flashinfer` when launching the server.
+- If you only need to use the OpenAI backend, you can avoid installing other dependencies by using `pip install "sglang[openai]"`.
 
 ## Quick Start
 The example below shows how to use sglang to answer a mulit-turn question.
@@ -288,8 +278,8 @@ for out in state.text_iter():
 ```
 
 ### Tips and Implementation Details
-- The `choices` argument in `sgl.gen` is implemented by computing the normalized log probabilities of all choices and selecting the one with the highest probability.
-- The `regex` argument in `sgl.gen` is implemented through autoregressive decoding with logit bias masking, according to the constraints set by the regex.
+- The `choices` argument in `sgl.gen` is implemented by computing the [token-length normalized log probabilities](https://blog.eleuther.ai/multiple-choice-normalization/) of all choices and selecting the one with the highest probability.
+- The `regex` argument in `sgl.gen` is implemented through autoregressive decoding with logit bias masking, according to the constraints set by the regex. It is compatible with `temperature=0` and `temperature != 0`.
 
 ## Backend: SGLang Runtime (SRT)
 The SGLang Runtime (SRT) is designed to work best with the SGLang frontend.
@@ -317,7 +307,6 @@ curl http://localhost:30000/generate \
 Learn more about the argument format [here](docs/sampling_params.md).
 
 ### OpenAI Compatible API
-
 In addition, the server supports an experimental OpenAI-compatible API.
 
 ```python
@@ -347,15 +336,16 @@ response = client.chat.completions.create(
 print(response)
 ```
 
-In above example, the server uses the chat template specified in the model tokenizer.
-You can override the chat template if needed when launching the server:
+By default, the server uses the chat template specified in the model tokenizer from Hugging Face. It should just work for most official models such as Llama-2/Llama-3.
+
+If needed, you can also override the chat template when launching the server:
 
 ```
 python -m sglang.launch_server --model-path meta-llama/Llama-2-7b-chat-hf --port 30000 --chat-template llama-2
 ```
 
 If the chat template you are looking for is missing, you are welcome to contribute it.
-Meanwhile, you can also temporary register your chat template as follows:
+Meanwhile, you can also temporarily register your chat template as follows:
 
 ```json
 {
@@ -374,63 +364,67 @@ python -m sglang.launch_server --model-path meta-llama/Llama-2-7b-chat-hf --port
 ```
 
 ### Additional Arguments
-- Add `--tp 2` to enable tensor parallelism.
+- Add `--tp 2` to enable tensor parallelism. If it indicates `peer access is not supported between these two devices`, add `--enable-p2p-check` option.
 ```
 python -m sglang.launch_server --model-path meta-llama/Llama-2-7b-chat-hf --port 30000 --tp 2
+```
+- Add `--dp 2` to enable data parallelism. It can also be used together with tp. Data parallelism is better for throughput if there is enough memory.
+```
+python -m sglang.launch_server --model-path meta-llama/Llama-2-7b-chat-hf --port 30000 --dp 2 --tp 2
 ```
 - If you see out-of-memory errors during serving, please try to reduce the memory usage of the KV cache pool by setting a smaller value of `--mem-fraction-static`. The default value is `0.9`
 ```
 python -m sglang.launch_server --model-path meta-llama/Llama-2-7b-chat-hf --port 30000 --mem-fraction-static 0.7
 ```
-- You can turn on [flashinfer](docs/flashinfer.md) to accelerate the inference by using highly optimized CUDA kernels.
+- See [hyperparameter_tuning.md](docs/hyperparameter_tuning.md) on tuning hyperparameters for better performance.
 
 ### Supported Models
 - Llama
 - Mistral
 - Mixtral
-- Qwen / Qwen 2
-- Gemma
-  - Please add a new flag `--attention-reduce-in-fp32` to avoid some precision errors.
+- Qwen / Qwen 2 / Qwen 2 MoE
+- Gemma / Gemma 2
   - `python -m sglang.launch_server --model-path google/gemma-7b-it --port 30000 --attention-reduce-in-fp32`
 - LLaVA
   - `python3 -m sglang.launch_server --model-path liuhaotian/llava-v1.5-7b --tokenizer-path llava-hf/llava-1.5-7b-hf --chat-template vicuna_v1.1 --port 30000`
   - `python3 -m sglang.launch_server --model-path liuhaotian/llava-v1.6-vicuna-7b --tokenizer-path llava-hf/llava-1.5-7b-hf --chat-template vicuna_v1.1 --port 30000`
   - `python3 -m sglang.launch_server --model-path liuhaotian/llava-v1.6-34b --tokenizer-path liuhaotian/llava-v1.6-34b-tokenizer --port 3000`
+- LLaVA-NeXT-Video
+  - see [srt_example_llava_v.sh](examples/usage/llava_video/srt_example_llava_v.sh)
 - Yi-VL
   - see [srt_example_yi_vl.py](examples/quick_start/srt_example_yi_vl.py).
 - StableLM
 - Command-R
 - DBRX
+- Grok
+- ChatGLM
 - AWQ/GPTQ/Marlin quantization
 
 Instructions for supporting a new model are [here](https://github.com/sgl-project/sglang/blob/main/docs/model_support.md).
 
 ## Benchmark And Performance
-
 - Llama-7B on NVIDIA A10G, FP16, Tensor Parallelism=1
 ![llama_7b](assets/llama_7b.jpg)
 
 - Mixtral-8x7B on NVIDIA A10G, FP16, Tensor Parallelism=8
 ![mixtral_8x7b](assets/mixtral_8x7b.jpg)
 
-Learn more [here](docs/benchmark_results.md).
+- Learn more about the above [results](docs/benchmark_results.md).
+- Synthetic latency and throughput benchmark [scripts](https://github.com/sgl-project/sglang/tree/main/benchmark/latency_throughput).
 
 ## Roadmap
 https://github.com/sgl-project/sglang/issues/157
 
 ## Citation And Acknowledgment
 ```
-@misc{zheng2023efficiently,
-      title={Efficiently Programming Large Language Models using SGLang},
-      author={Lianmin Zheng and Liangsheng Yin and Zhiqiang Xie and Jeff Huang and Chuyue Sun and Cody Hao Yu and Shiyi Cao and Christos Kozyrakis and Ion Stoica and Joseph E. Gonzalez and Clark Barrett and Ying Sheng},
-      year={2023},
+@misc{zheng2024sglang,
+      title={SGLang: Efficient Execution of Structured Language Model Programs},
+      author={Lianmin Zheng and Liangsheng Yin and Zhiqiang Xie and Chuyue Sun and Jeff Huang and Cody Hao Yu and Shiyi Cao and Christos Kozyrakis and Ion Stoica and Joseph E. Gonzalez and Clark Barrett and Ying Sheng},
+      year={2024},
       eprint={2312.07104},
       archivePrefix={arXiv},
       primaryClass={cs.AI}
 }
 ```
-
-[![Paper page](https://huggingface.co/datasets/huggingface/badges/resolve/main/paper-page-md.svg)](https://huggingface.co/papers/2312.07104)
-
 
 We learned from the design and reused some code of the following projects: [Guidance](https://github.com/guidance-ai/guidance), [vLLM](https://github.com/vllm-project/vllm), [LightLLM](https://github.com/ModelTC/lightllm), [FlashInfer](https://github.com/flashinfer-ai/flashinfer), [Outlines](https://github.com/outlines-dev/outlines), [LMQL](https://github.com/eth-sri/lmql).

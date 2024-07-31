@@ -1,4 +1,5 @@
 import openai
+
 client = openai.Client(api_key="EMPTY", base_url="http://127.0.0.1:12000/v1")
 response = client.chat.completions.create(
     model="default",
@@ -19,10 +20,7 @@ response = client.chat.completions.create(
             "role": "assistant",
             "content": "A bar chart.",
         },
-        {
-            "role": "user",
-            "content": "More details?"
-        }
+        {"role": "user", "content": "More details?"},
     ],
     temperature=0.7,
     max_tokens=512,

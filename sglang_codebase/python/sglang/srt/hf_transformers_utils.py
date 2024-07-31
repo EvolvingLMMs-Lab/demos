@@ -1,9 +1,10 @@
 """Utilities for Huggingface Transformers."""
 
+import functools
 import json
 import os
 import warnings
-from typing import List, Optional, Tuple, Union
+from typing import AbstractSet, Collection, Literal, Optional, Union
 
 from huggingface_hub import snapshot_download
 from transformers import (
@@ -15,8 +16,7 @@ from transformers import (
 )
 
 from sglang.srt.utils import is_multimodal_model
-from llava.model.language_model.llava_mistral import LlavaMistralConfig
-from llava.model.language_model.llava_qwen import LlavaQwenConfig
+
 
 def download_from_hf(model_path: str):
     if os.path.exists(model_path):
@@ -31,16 +31,18 @@ def get_config_json(model_path: str):
     return config
 
 
-def get_config(model: str, trust_remote_code: bool, revision: Optional[str] = None):
-    if "mistral" in model and "llava" in model:
-        return LlavaMistralConfig.from_pretrained(model)
-    elif "qwen" in model and "llava" in model:
-        return LlavaQwenConfig.from_pretrained(model)
-    else:
-        config = AutoConfig.from_pretrained(
-            model, trust_remote_code=trust_remote_code, revision=revision
-        )
-        return config
+def get_config(
+    model: str,
+    trust_remote_code: bool,
+    revision: Optional[str] = None,
+    model_overide_args: Optional[dict] = None,
+):
+    config = AutoConfig.from_pretrained(
+        model, trust_remote_code=trust_remote_code, revision=revision
+    )
+    if model_overide_args:
+        config.update(model_overide_args)
+    return config
 
 
 # Models don't use the same configuration key for determining the maximum
@@ -83,6 +85,12 @@ def get_tokenizer(
     tokenizer_revision: Optional[str] = None,
     **kwargs,
 ) -> Union[PreTrainedTokenizer, PreTrainedTokenizerFast]:
+    if tokenizer_name.endswith(".json"):
+        return TiktokenTokenizer(tokenizer_name)
+
+    if tokenizer_name.endswith(".model"):
+        return SentencePieceTokenizer(tokenizer_name)
+
     """Gets a tokenizer for the given model name via Huggingface."""
     if is_multimodal_model(tokenizer_name):
         processor = get_processor(
@@ -169,3 +177,129 @@ def get_processor(
         **kwargs,
     )
     return processor
+
+
+class TiktokenTokenizer:
+    def __init__(self, tokenizer_path):
+        import tiktoken
+        from jinja2 import Template
+
+        PAT_STR_B = r"""(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+"""
+
+        # Read JSON
+        name = "tmp-json"
+        with open(tokenizer_path, "rb") as fin:
+            tok_dict = json.load(fin)
+
+        mergeable_ranks = {
+            bytes(item["bytes"]): item["token"] for item in tok_dict["regular_tokens"]
+        }
+        special_tokens = {
+            bytes(item["bytes"]).decode(): item["token"]
+            for item in tok_dict["special_tokens"]
+        }
+        assert tok_dict["word_split"] == "V1"
+
+        kwargs = {
+            "name": name,
+            "pat_str": tok_dict.get("pat_str", PAT_STR_B),
+            "mergeable_ranks": mergeable_ranks,
+            "special_tokens": special_tokens,
+        }
+        if "default_allowed_special" in tok_dict:
+            default_allowed_special = set(
+                [
+                    bytes(bytes_list).decode()
+                    for bytes_list in tok_dict["default_allowed_special"]
+                ]
+            )
+        else:
+            default_allowed_special = None
+        if "vocab_size" in tok_dict:
+            kwargs["explicit_n_vocab"] = tok_dict["vocab_size"]
+
+        tokenizer = tiktoken.Encoding(**kwargs)
+        tokenizer._default_allowed_special = default_allowed_special or set()
+        tokenizer._default_allowed_special |= {"<|separator|>"}
+
+        def encode_patched(
+            self,
+            text: str,
+            *,
+            allowed_special: Union[
+                Literal["all"], AbstractSet[str]
+            ] = set(),  # noqa: B006
+            disallowed_special: Union[Literal["all"], Collection[str]] = "all",
+        ) -> list[int]:
+            if isinstance(allowed_special, set):
+                allowed_special |= self._default_allowed_special
+            return tiktoken.Encoding.encode(
+                self,
+                text,
+                allowed_special=allowed_special,
+                disallowed_special=disallowed_special,
+            )
+
+        tokenizer.encode = functools.partial(encode_patched, tokenizer)
+
+        # Convert to HF interface
+        self.tokenizer = tokenizer
+        self.eos_token_id = tokenizer._special_tokens["<|eos|>"]
+        self.vocab_size = tokenizer.n_vocab
+        self.chat_template = Template(
+            "{% for message in messages %}{% if message['role'] == 'user' %}{{ 'Human: ' + message['content'].strip() + '<|separator|>\n\n' }}{% elif message['role'] == 'system' %}{{ 'System: ' + message['content'].strip() + '<|separator|>\n\n' }}{% elif message['role'] == 'assistant' %}{{ 'Assistant: '  + message['content'] + '<|separator|>\n\n' }}{% endif %}{% endfor %}{% if add_generation_prompt %}{{ 'Assistant:' }}{% endif %}"
+        )
+
+    def encode(self, x, add_special_tokens=False):
+        return self.tokenizer.encode(x)
+
+    def decode(self, x):
+        return self.tokenizer.decode(x)
+
+    def batch_decode(
+        self, batch, skip_special_tokens=True, spaces_between_special_tokens=False
+    ):
+        if isinstance(batch[0], int):
+            batch = [[x] for x in batch]
+        return self.tokenizer.decode_batch(batch)
+
+    def apply_chat_template(self, messages, tokenize, add_generation_prompt):
+        ret = self.chat_template.render(
+            messages=messages, add_generation_prompt=add_generation_prompt
+        )
+        return self.encode(ret) if tokenize else ret
+
+
+class SentencePieceTokenizer:
+    def __init__(self, tokenizer_path):
+        import sentencepiece as spm
+        from jinja2 import Template
+
+        tokenizer = spm.SentencePieceProcessor(model_file=tokenizer_path)
+
+        # Convert to HF interface
+        self.tokenizer = tokenizer
+        self.eos_token_id = tokenizer.eos_id()
+        self.vocab_size = tokenizer.vocab_size()
+        self.chat_template = Template(
+            "{% for message in messages %}{% if message['role'] == 'user' %}{{ 'Human: ' + message['content'].strip() + '<|separator|>\n\n' }}{% elif message['role'] == 'system' %}{{ 'System: ' + message['content'].strip() + '<|separator|>\n\n' }}{% elif message['role'] == 'assistant' %}{{ 'Assistant: '  + message['content'] + '<|separator|>\n\n' }}{% endif %}{% endfor %}{% if add_generation_prompt %}{{ 'Assistant:' }}{% endif %}"
+        )
+
+    def encode(self, x, add_special_tokens=False):
+        return self.tokenizer.encode(x)
+
+    def decode(self, x):
+        return self.tokenizer.decode(x)
+
+    def batch_decode(
+        self, batch, skip_special_tokens=True, spaces_between_special_tokens=False
+    ):
+        if isinstance(batch[0], int):
+            batch = [[x] for x in batch]
+        return self.tokenizer.decode(batch)
+
+    def apply_chat_template(self, messages, tokenize, add_generation_prompt):
+        ret = self.chat_template.render(
+            messages=messages, add_generation_prompt=add_generation_prompt
+        )
+        return self.encode(ret) if tokenize else ret

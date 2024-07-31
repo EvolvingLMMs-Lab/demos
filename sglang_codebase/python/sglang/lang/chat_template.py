@@ -84,7 +84,7 @@ register_chat_template(
             "system": ("SYSTEM:", "\n"),
             "user": ("USER:", "\n"),
             "assistant": ("ASSISTANT:", "\n"),
-        },
+        }
     )
 )
 
@@ -116,11 +116,13 @@ register_chat_template(
     )
 )
 
-
+# There is default system prompt for qwen
+# reference: https://modelscope.cn/models/qwen/Qwen2-72B-Instruct/file/view/master?fileName=tokenizer_config.json&status=1
+# The chat template is: "{% for message in messages %}{% if loop.first and messages[0]['role'] != 'system' %}{{ '<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n' }}{% endif %}{{'<|im_start|>' + message['role'] + '\n' + message['content'] + '<|im_end|>' + '\n'}}{% endfor %}{% if add_generation_prompt %}{{ '<|im_start|>assistant\n' }}{% endif %}"
 register_chat_template(
     ChatTemplate(
-        name="chatml-llava",
-        default_system_prompt="Answer the questions.",
+        name="qwen",
+        default_system_prompt="You are a helpful assistant.",
         role_prefix_and_suffix={
             "system": ("<|im_start|>system\n", "<|im_end|>\n"),
             "user": ("<|im_start|>user\n", "<|im_end|>\n"),
@@ -128,10 +130,36 @@ register_chat_template(
         },
         style=ChatTemplateStyle.PLAIN,
         stop_str=("<|im_end|>",),
-        image_token=" <image>\n",
     )
 )
 
+# conv_qwen = Conversation(
+#     system="""<|im_start|>system
+# You are a helpful assistant.""",
+#     roles=("<|im_start|>user", "<|im_start|>assistant"),
+#     version="qwen",
+#     messages=[],
+#     offset=0,
+#     sep_style=SeparatorStyle.CHATML,
+#     sep="<|im_end|>",
+# )
+
+register_chat_template(
+    ChatTemplate(
+        name="chatml-llava",
+        default_system_prompt="You are a helpful assistant.",
+        role_prefix_and_suffix={
+            "system": ("<|im_start|>system\n", "<|im_end|>\n"),
+            "user": ("<|im_start|>user\n", "<|im_end|>\n"),
+            "assistant": ("<|im_start|>assistant\n", "<|im_end|>\n"),
+        },
+        style=ChatTemplateStyle.PLAIN,
+        stop_str=("<|im_end|>",),
+        image_token="<image>\n",
+    )
+)
+
+# Reference: https://github.com/lm-sys/FastChat/blob/main/docs/vicuna_weights_version.md#prompt-template
 register_chat_template(
     ChatTemplate(
         name="vicuna_v1.1",
@@ -148,6 +176,20 @@ register_chat_template(
     )
 )
 
+# Reference: https://modelscope.cn/models/01ai/Yi-1.5-34B-Chat/file/view/master?fileName=tokenizer_config.json&status=1
+register_chat_template(
+    ChatTemplate(
+        name="yi-1.5",
+        default_system_prompt=None,
+        role_prefix_and_suffix={
+            "system": ("", ""),
+            "user": ("<|im_start|>user\n", "<|im_end|>\n<|im_start|>assistant\n"),
+            "assistant": ("", "<|im_end|>\n"),
+        },
+        style=ChatTemplateStyle.PLAIN,
+        stop_str=("<|im_end|>",)
+    )
+)
 
 register_chat_template(
     ChatTemplate(
@@ -187,7 +229,7 @@ register_chat_template(
 # Reference: https://github.com/01-ai/Yi/tree/main/VL#major-difference-with-llava
 register_chat_template(
     ChatTemplate(
-        name="yi",
+        name="yi-vl",
         default_system_prompt=(
             "This is a chat between an inquisitive human and an AI assistant. Assume the role of the AI assistant. Read all the images carefully, and respond to the human's questions with informative, helpful, detailed and polite answers."
             "这是一个好奇的人类和一个人工智能助手之间的对话。假设你扮演这个AI助手的角色。仔细阅读所有的图像，并对人类的问题做出信息丰富、有帮助、详细的和礼貌的回答。"
@@ -227,6 +269,25 @@ register_chat_template(
     )
 )
 
+register_chat_template(
+    ChatTemplate(
+        name="c4ai-command-r",
+        default_system_prompt=None,
+        role_prefix_and_suffix={
+            "system": (
+                "<|START_OF_TURN_TOKEN|><|SYSTEM_TOKEN|>",
+                "<|END_OF_TURN_TOKEN|>",
+            ),
+            "user": ("<|START_OF_TURN_TOKEN|><|USER_TOKEN|>", "<|END_OF_TURN_TOKEN|>"),
+            "assistant": (
+                "<|START_OF_TURN_TOKEN|><|CHATBOT_TOKEN|>",
+                "<|END_OF_TURN_TOKEN|>",
+            ),
+        },
+        style=ChatTemplateStyle.PLAIN,
+    )
+)
+
 
 @register_chat_template_matching_function
 def match_dbrx(model_path: str):
@@ -239,6 +300,8 @@ def match_vicuna(model_path: str):
     if "vicuna" in model_path.lower():
         return get_chat_template("vicuna_v1.1")
     if "llava-v1.5" in model_path.lower():
+        return get_chat_template("vicuna_v1.1")
+    if "llava-next-video-7b" in model_path.lower():
         return get_chat_template("vicuna_v1.1")
 
 
@@ -264,20 +327,30 @@ def match_llama3_instruct(model_path: str):
 
 @register_chat_template_matching_function
 def match_chat_ml(model_path: str):
+    # import pdb;pdb.set_trace()
     model_path = model_path.lower()
     if "tinyllama" in model_path:
         return get_chat_template("chatml")
-    if "qwen" in model_path and "chat" in model_path:
-        return get_chat_template("chatml")
-    if "llava-v1.6-34b" in model_path:
+    # Now the suffix for qwen2 chat model is "instruct"
+    if "qwen" in model_path and ("chat" in model_path or "instruct" in model_path) and ("llava" not in model_path):
+        return get_chat_template("qwen")
+    if (
+        "llava-v1.6-34b" in model_path
+        or "llava-v1.6-yi-34b" in model_path
+        or "llava-next-video-34b" in model_path
+        or "llavanext-google_siglip-so400m-patch14-384-Qwen_Qwen2-7B-Instruct-mid_to_final_next_2p4m_am9_continual_ov" in model_path
+    ):
+        print("######################## Matched chatml-llava ########################")
         return get_chat_template("chatml-llava")
 
 
 @register_chat_template_matching_function
 def match_chat_yi(model_path: str):
     model_path = model_path.lower()
-    if "yi" in model_path:
-        return get_chat_template("yi")
+    if "yi-vl" in model_path and "llava" not in model_path:
+        return get_chat_template("yi-vl")
+    elif "yi-1.5" in model_path and "chat" in model_path:
+        return get_chat_template("yi-1.5")
 
 
 @register_chat_template_matching_function
@@ -285,6 +358,13 @@ def match_gemma_it(model_path: str):
     model_path = model_path.lower()
     if "gemma" in model_path and "it" in model_path:
         return get_chat_template("gemma-it")
+
+
+@register_chat_template_matching_function
+def match_c4ai_command_r(model_path: str):
+    model_path = model_path.lower()
+    if "c4ai-command-r" in model_path:
+        return get_chat_template("c4ai-command-r")
 
 
 if __name__ == "__main__":
