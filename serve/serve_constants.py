@@ -78,7 +78,7 @@ html_header = """
   </a>
   <div>
     <h2><a href="https://llava-vl.github.io/blog/2024-05-10-llava-next-stronger-llms/">LLaVA OneVision</a></h2>
-    <h5><a href="https://github.com/LLaVA-VL/LLaVA-NeXT">Code</a> | <a href="https://huggingface.co/collections/lmms-lab/llava-onevision-66a259c3526e15166d6bba37">Checkpoints</a> | <a href="https://huggingface.co/collections/lmms-lab/llava-next-6623288e2d61edba3ddbf5ff">Data</a> | <a href="https://llava-vl.github.io/blog">LLaVA-NeXT Series Blog</a></h5>
+    <h5><a href="https://github.com/LLaVA-VL/LLaVA-NeXT">Code</a> | <a href="https://huggingface.co/collections/lmms-lab/llava-onevision-66a259c3526e15166d6bba37">Checkpoints</a> | <a href="https://huggingface.co/datasets/lmms-lab/LLaVA-OneVision-Data">Data</a> | <a href="https://llava-vl.github.io/blog">LLaVA-NeXT Series Blog</a></h5>
   </div>
 </div>
 """

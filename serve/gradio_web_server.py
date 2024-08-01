@@ -297,10 +297,10 @@ def add_text(video_input, state, messages, image_process_mode, request: gr.Reque
         #     text = "<image>" * len(image) + "\n" + text
         # do not use it since openai compatible API do not need <image>
         text = (text, image, image_process_mode)
-        state = default_conversation.copy()
+        # state = default_conversation.copy()
     elif video_input is not None:
         text = (text, [video_input], image_process_mode)
-        state = default_conversation.copy()
+        # state = default_conversation.copy()
 
     state.append_message(state.roles[0], text)
     state.append_message(state.roles[1], None)
@@ -660,7 +660,7 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
     textbox = gr.MultimodalTextbox(
         interactive=True,
         file_types=["image", "video"],
-        # file_count="multiple",
+        file_count="multiple",
         placeholder="Enter message or upload file...",
         show_label=False,
         max_lines=10000,
@@ -728,7 +728,7 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
         textbox.render()
         # flag_btn = gr.Button(value="Flag", interactive=False, visible=False)
         with gr.Row(elem_id="buttons") as button_row:
-            clear_btn = gr.Button(value="Clear", interactive=False)
+            clear_btn = gr.Button(value="🧹 Clear", interactive=False)
             upvote_btn = gr.Button(
                 value="🤞 Upvote",
                 interactive=False,
@@ -742,28 +742,18 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
 
         with gr.Column(scale=10):
             video = gr.Video(label="Input Video", visible=False)
-            gr.Examples(
-                label="Video",
-                examples=[
-                    [
-                        f"{PARENT_FOLDER}/assets/cpRSZOcJrs029ixB.mp4",
-                        {
-                            "text": "What's the video about?",
-                        },
-                    ],
-                    [
-                        f"{PARENT_FOLDER}/assets/aquarium-nyc.mp4",
-                        {
-                            "text": "What's the video about?",
-                        },
-                    ],
-                ],
-                inputs=[video, textbox],
-            )
 
             gr.Examples(
-                examples_per_page=8,
+                examples_per_page=6,
                 examples=[
+                    [
+                        {
+                            "files": [
+                                f"{PARENT_FOLDER}/assets/user_example_06.jpg",
+                            ],
+                            "text": "Write the content of this table in a Notion format?",
+                        },
+                    ],
                     [
                         {
                             "files": [
@@ -783,14 +773,6 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
                     [
                         {
                             "files": [
-                                f"{PARENT_FOLDER}/assets/user_example_06.jpg",
-                            ],
-                            "text": "Write the content of this table in a Notion format?",
-                        },
-                    ],
-                    [
-                        {
-                            "files": [
                                 f"{PARENT_FOLDER}/assets/user_example_05.jpg",
                             ],
                             "text": "この猫の目の大きさは、どのような理由で他の猫と比べて特に大きく見えますか？",
@@ -803,7 +785,7 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
                             ],
                             "text": "Why this image funny?",
                         },
-                    ],                                 
+                    ],
                     [
                         {
                             "files": [
@@ -811,22 +793,64 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
                             ],
                             "text": "write an image prompt for this character without details about the surrounding.\nInclude color and details about all of these variables: age, eyes, hair, skin, expression, clothes",
                         },
-                    ],                    
+                    ],
                     [
                         {
                             "files": [
                                 f"{PARENT_FOLDER}/assets/user_example_10.png",
                             ],
-                            "text": "Here's a design for blogging website. Provide the working source code for the website using HTML, CSS and JavaScript as required.",
+                            "text": "Here's a design for blogging website.\nProvide the working source code for the website using HTML, CSS and JavaScript as required.",
                         },
                     ],
+                ],
+                inputs=[textbox],
+                label="Image",
+            )
+                        
+            gr.Examples(
+                label="Video",
+                examples=[
+                    [
+                        {
+                            "files": [
+                                f"{PARENT_FOLDER}/assets/cpRSZOcJrs029ixB.mp4",
+                            ],
+                            "text": "What's the unusual part of this video?",
+                        },
+                    ],
+                    [
+                        {
+                            "files": [
+                                f"{PARENT_FOLDER}/assets/aquarium-nyc.mp4",
+                            ],
+                            "text": "What's the creative part of this video?",
+                        },
+                    ],
+                    [
+                        {
+                            "files": [
+                                f"{PARENT_FOLDER}/assets/cpRSZOcJrs029ixB.mp4",
+                                f"{PARENT_FOLDER}/assets/aquarium-nyc.mp4",
+                            ],
+                            "text": "What is the difference between these two videos?",
+                        },
+                    ],
+                ],
+                inputs=[textbox],
+            )
+
+            gr.Examples(
+                examples_per_page=4,
+                inputs=[textbox],
+                label="Multi-Image",
+                examples=[
                     [
                         {
                             "files": [
                                 f"{PARENT_FOLDER}/assets/mistral-large-2407-multiple.png",
                                 f"{PARENT_FOLDER}/assets/mistral-large-2407-language-diversity.png",
                             ],
-                            "text": "On the Multilingual MMLU benchmark covering different languages, Mistral Large 2 performed on par with Meta’s all-new Llama 3.1-405B while delivering more significant cost benefits due to its smaller size.\n\n'Mistral Large 2 is designed for single-node inference with long-context applications in mind – its size of 123 billion parameters allows it to run at large throughput on a single node,' the company noted in a blog post.But, that’s not the only benefit.\n\nThe original Large model did not do well on coding tasks, which Mistral seems to have remediated after training the latest version on large chunks of code.\n\nThe new model can generate code in 80+ programming languages, including Python, Java, C, C++, JavaScript and Bash, with a very high level of accuracy (according to the average from MultiPL-E benchmark). \n\nOn HumanEval and HumanEval Plus benchmarks for code generation, it outperformed Claude 3.5 Sonnet and Claude 3 Opus, while sitting just behind GPT-4o. Similarly, across Mathematics-focused benchmarks – GSM8K and Math Instruct – it grabbed the second spot.\n\nConclude based on above news.",
+                            "text": "Conclude based on above news.",
                         }
                     ],
                     [
@@ -837,7 +861,7 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
                                 f"{PARENT_FOLDER}/assets/shud.jpg",
                             ],
                             "text": "what is fun about the images?",
-                        },                        
+                        },
                     ],
                     [
                         {
@@ -890,8 +914,6 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
                         }
                     ],
                 ],
-                inputs=[textbox],
-                label="Examples",
             )
 
             # with gr.Accordion("More Examples", open=False) as more_examples_row:
@@ -971,7 +993,6 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
             add_text,
             [video, state, textbox, image_process_mode],
             [state, chatbot, textbox] + btn_list,
-            queue=False,
         ).then(
             http_bot,
             [state, model_selector, temperature, top_p, max_output_tokens],
@@ -979,7 +1000,9 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
             concurrency_limit=concurrency_count,
         ).then(
             lambda: gr.MultimodalTextbox(interactive=True), None, [textbox]
-        ).then(lambda: video, None, [video])
+        ).then(
+            lambda: video, None, [video]
+        )
 
         chatbot.like(print_like_dislike, None, None)
 
@@ -994,7 +1017,9 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
             concurrency_limit=concurrency_count,
         ).then(
             lambda: gr.MultimodalTextbox(interactive=True), None, [textbox]
-        ).then(lambda: video, None, [video])
+        ).then(
+            lambda: video, None, [video]
+        )
 
         if args.model_list_mode == "once":
             demo.load(
@@ -1016,7 +1041,7 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", type=str, default="0.0.0.0")
-    parser.add_argument("--port", type=int)
+    parser.add_argument("--port", type=int, default=7880)
     parser.add_argument("--controller-url", type=str, default="http://localhost:12355")
     parser.add_argument("--concurrency-count", type=int, default=32)
     parser.add_argument(
