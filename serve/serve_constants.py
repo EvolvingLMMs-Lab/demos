@@ -3,7 +3,7 @@ title_markdown = """
     <img src="https://i.postimg.cc/JhT7zPj3/assistant-logo.png" alt="LLaVA-NeXT" style="max-width: 80px; height: auto; border-radius: 10px;">
   </a>
   <div>
-    <h2 ><a href="https://llava-vl.github.io/blog/2024-05-10-llava-next-stronger-llms/">LLaVA-NeXT: Stronger LLMs Supercharge Multimodal Capabilities in the Wild</a> </h2>
+    <h2 ><a href="https://llava-vl.github.io/blog/2024-05-10-llava-next-stronger-llms/">LLaVA OneVision: Multimodal Chat</a> </h2>
     <h5 style="margin: 0;"><a href="https://llavanext-video.lmms-lab.com/">Video Model</a> | <a href="https://github.com/LLaVA-VL/LLaVA-NeXT">Github</a> | <a href="https://huggingface.co/collections/lmms-lab/llava-next-6623288e2d61edba3ddbf5ff">Huggingface</a> | <a href="https://llava-vl.github.io/blog/2024-05-10-llava-next-stronger-llms/">Blog</a> | <a href="https://llava-vl.github.io">More</a></h5>
   </div>
 </div>
@@ -77,8 +77,8 @@ html_header = """
     <img src="https://i.postimg.cc/JhT7zPj3/assistant-logo.png" alt="LLaVA-NeXT">
   </a>
   <div>
-    <h2><a href="https://llava-vl.github.io/blog/2024-05-10-llava-next-stronger-llms/">LLaVA-NeXT: Stronger LLMs Supercharge Multimodal Capabilities in the Wild</a></h2>
-    <h5><a href="https://github.com/LLaVA-VL/LLaVA-NeXT">Github</a> | <a href="https://huggingface.co/collections/lmms-lab/llava-next-6623288e2d61edba3ddbf5ff">Huggingface</a> | <a href="https://llava-vl.github.io/blog/2024-05-10-llava-next-stronger-llms/">Blog</a> | <a href="https://llava-vl.github.io/blog/2024-04-30-llava-next-video/">More : Video Model</a></h5>
+    <h2><a href="https://llava-vl.github.io/blog/2024-05-10-llava-next-stronger-llms/">LLaVA OneVision</a></h2>
+    <h5><a href="https://github.com/LLaVA-VL/LLaVA-NeXT">Code</a> | <a href="https://huggingface.co/collections/lmms-lab/llava-onevision-66a259c3526e15166d6bba37">Checkpoints</a> | <a href="https://huggingface.co/datasets/lmms-lab/LLaVA-OneVision-Data">Data</a> | <a href="https://llava-vl.github.io/blog">LLaVA-NeXT Series Blog</a></h5>
   </div>
 </div>
 """
@@ -93,8 +93,6 @@ tos_markdown = """
 ## Terms of use
 By using this service, users are required to agree to the following terms:
 The service is a research preview intended for non-commercial use only. It only provides limited safety measures and may generate offensive content. It must not be used for any illegal, harmful, violent, racist, or sexual purposes. The service may collect user dialogue data for future research.
-
-For an optimal experience, please use desktop computers for this demo, as mobile devices may compromise its quality.
 
 We deploy our model backend with SGLang. However, there could be congestion during the serving process, leading to delayed responses. If you encounter any issues with the webpage, kindly refresh it.
 """

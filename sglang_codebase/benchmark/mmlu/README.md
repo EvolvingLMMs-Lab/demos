@@ -1,7 +1,6 @@
 ## Download data
 ```
-wget https://people.eecs.berkeley.edu/~hendrycks/data.tar
-tar xf data.tar
+bash download_data.sh
 ```
 
 ## Run benchmark
@@ -46,7 +45,7 @@ python3 bench_other.py --nsub 10 --backend lightllm
 
 ### Benchmark guidance
 ```
-python3 bench_other.py --nsub 10 --backend guidance --parallel 1
+python3 bench_other.py --nsub 10 --backend guidance --parallel 1 --n-ctx 4096 --model-path path/to/gguf
 ```
 
 

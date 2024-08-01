@@ -321,6 +321,7 @@ class LongVA:
         )
         frame_idx = uniform_sampled_frames.tolist()
         spare_frames = vr.get_batch(frame_idx).asnumpy()
+        print(f"spare_frames: {spare_frames.shape}")
         return spare_frames  # (frames, height, width, channels)
 
     def generate_until(self, requests: dict, gen_kwargs: dict) -> List[str]:
@@ -492,6 +493,7 @@ class LongVA:
         elif task_type == "video":  # For video task
             image_tensor = []
             max_frames = gen_kwargs.get("sample_frames", self.max_frames_num)
+            print(f"Sampling {max_frames} frames")
             if "sample_frames" in gen_kwargs:
                 gen_kwargs.pop("sample_frames")
                 
@@ -671,16 +673,19 @@ class LongVA:
 
 
 if __name__ == "__main__":
-    model = LongVA()
-    input_visual = Image.open(
-        "/mnt/bn/vl-research/workspace/boli01/projects/demos/assets/otter_books.jpg"
-    ).convert("RGB")
-    # input_image = "/mnt/bn/vl-research/workspace/boli01/projects/demos/assets/dc_demo.mp4"
-    input_context = "What is the main character in the video?"
-    input_visuals = []
-    task_type = "text"
-    gen_kwargs = {"max_new_tokens": 1024, "temperature": 0, "do_sample": False}
+    model = LongVA(
+        pretrained="LongVa/LLaVA-Qwen-extend-anyres7x7-avgpool2x2-dpo",
+    )
+    # input_visual = Image.open(
+    #     "/mnt/bn/vl-research/workspace/boli01/projects/demos/assets/otter_books.jpg"
+    # ).convert("RGB")
+    input_video = "/mnt/bn/vl-research/workspace/boli01/projects/demos/assets/water.mp4"
+    input_context = "Please generate detail descriptions about this video. And conclude what does the man do with the ice cube?"
+    input_visuals = [input_video]
+    task_type = "video"
+    gen_kwargs = {"max_new_tokens": 1024, "temperature": 0, "do_sample": False, "sample_frames": 128}
     requests = {
+        "prev_conv": [],
         "visuals": input_visuals,
         "context": input_context,
         "task_type": task_type,

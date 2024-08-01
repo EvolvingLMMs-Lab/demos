@@ -19,10 +19,7 @@ response = client.chat.completions.create(
             "role": "assistant",
             "content": "A bar chart.",
         },
-        {
-            "role": "user",
-            "content": "More details?"
-        }
+        {"role": "user", "content": "More details?"},
     ],
     temperature=0.7,
     max_tokens=512,

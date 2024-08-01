@@ -1,24 +1,25 @@
 import json
-from typing import Callable, List, Optional, Union
+from typing import List, Optional
 
 import numpy as np
-import requests
 
 from sglang.backend.base_backend import BaseBackend
 from sglang.global_config import global_config
-from sglang.lang.chat_template import get_chat_template_by_model_path
+from sglang.lang.chat_template import get_chat_template_by_model_path, get_chat_template
 from sglang.lang.interpreter import StreamExecutor
-from sglang.lang.ir import SglArgument, SglSamplingParams
-from sglang.utils import encode_image_base64, find_printable_text, http_request
+from sglang.lang.ir import SglSamplingParams
+from sglang.utils import http_request
 
 
 class RuntimeEndpoint(BaseBackend):
+
     def __init__(
         self,
         base_url: str,
         auth_token: Optional[str] = None,
         api_key: Optional[str] = None,
         verify: Optional[str] = None,
+        **kwargs
     ):
         super().__init__()
         self.support_concate_and_append = True
@@ -34,12 +35,10 @@ class RuntimeEndpoint(BaseBackend):
             api_key=self.api_key,
             verify=self.verify,
         )
-        assert res.status_code == 200
+        self._assert_success(res)
         self.model_info = res.json()
 
-        self.chat_template = get_chat_template_by_model_path(
-            self.model_info["model_path"]
-        )
+        self.chat_template = get_chat_template_by_model_path(self.model_info["model_path"]) if "chat_template" not in kwargs else get_chat_template(kwargs["chat_template"])
 
     def get_model_name(self):
         return self.model_info["model_path"]
@@ -50,7 +49,7 @@ class RuntimeEndpoint(BaseBackend):
             auth_token=self.auth_token,
             verify=self.verify,
         )
-        return res.status_code == 200
+        self._assert_success(res)
 
     def get_server_args(self):
         res = http_request(
@@ -58,6 +57,7 @@ class RuntimeEndpoint(BaseBackend):
             auth_token=self.auth_token,
             verify=self.verify,
         )
+        self._assert_success(res)
         return res.json()
 
     def get_chat_template(self):
@@ -71,7 +71,7 @@ class RuntimeEndpoint(BaseBackend):
             api_key=self.api_key,
             verify=self.verify,
         )
-        assert res.status_code == 200
+        self._assert_success(res)
 
     def commit_lazy_operations(self, s: StreamExecutor):
         data = {"text": s.text_, "sampling_params": {"max_new_tokens": 0}}
@@ -83,7 +83,7 @@ class RuntimeEndpoint(BaseBackend):
             api_key=self.api_key,
             verify=self.verify,
         )
-        assert res.status_code == 200
+        self._assert_success(res)
 
     def fill_image(self, s: StreamExecutor):
         data = {"text": s.text_, "sampling_params": {"max_new_tokens": 0}}
@@ -95,7 +95,7 @@ class RuntimeEndpoint(BaseBackend):
             api_key=self.api_key,
             verify=self.verify,
         )
-        assert res.status_code == 200
+        self._assert_success(res)
 
     def generate(
         self,
@@ -107,6 +107,7 @@ class RuntimeEndpoint(BaseBackend):
                 "text": s.text_,
                 "sampling_params": {
                     "skip_special_tokens": global_config.skip_special_tokens_in_output,
+                    "spaces_between_special_tokens": global_config.spaces_between_special_tokens_in_out,
                     **sampling_params.to_srt_kwargs(),
                 },
             }
@@ -115,12 +116,18 @@ class RuntimeEndpoint(BaseBackend):
                 "text": s.text_,
                 "sampling_params": {
                     "skip_special_tokens": global_config.skip_special_tokens_in_output,
+                    "spaces_between_special_tokens": global_config.spaces_between_special_tokens_in_out,
                     "dtype": "int",
                     **sampling_params.to_srt_kwargs(),
                 },
             }
         else:
             raise RuntimeError(f"Invalid dtype: {sampling_params.dtype}")
+
+        for item in ["return_logprob", "logprob_start_len", "top_logprobs_num", "return_text_in_logprobs"]:
+            value = getattr(sampling_params, item, None)
+            if value is not None:
+                data[item] = value
 
         self._add_images(s, data)
 
@@ -131,6 +138,8 @@ class RuntimeEndpoint(BaseBackend):
             api_key=self.api_key,
             verify=self.verify,
         )
+        self._assert_success(res)
+
         obj = res.json()
         comp = obj["text"]
         return comp, obj["meta_info"]
@@ -145,6 +154,7 @@ class RuntimeEndpoint(BaseBackend):
                 "text": s.text_,
                 "sampling_params": {
                     "skip_special_tokens": global_config.skip_special_tokens_in_output,
+                    "spaces_between_special_tokens": global_config.spaces_between_special_tokens_in_out,
                     **sampling_params.to_srt_kwargs(),
                 },
             }
@@ -153,6 +163,7 @@ class RuntimeEndpoint(BaseBackend):
                 "text": s.text_,
                 "sampling_params": {
                     "skip_special_tokens": global_config.skip_special_tokens_in_output,
+                    "spaces_between_special_tokens": global_config.spaces_between_special_tokens_in_out,
                     "dtype": "int",
                     **sampling_params.to_srt_kwargs(),
                 },
@@ -160,10 +171,15 @@ class RuntimeEndpoint(BaseBackend):
         else:
             raise RuntimeError(f"Invalid dtype: {sampling_params.dtype}")
 
+        for item in ["return_logprob", "logprob_start_len", "top_logprobs_num", "return_text_in_logprobs"]:
+            value = getattr(sampling_params, item, None)
+            if value is not None:
+                data[item] = value
+
         data["stream"] = True
         self._add_images(s, data)
 
-        response = http_request(
+        res = http_request(
             self.base_url + "/generate",
             json=data,
             stream=True,
@@ -171,23 +187,19 @@ class RuntimeEndpoint(BaseBackend):
             api_key=self.api_key,
             verify=self.verify,
         )
+        self._assert_success(res)
         pos = 0
 
-        incomplete_text = ""
-        for chunk in response.iter_lines(decode_unicode=False):
+        for chunk in res.iter_lines(decode_unicode=False):
             chunk = chunk.decode("utf-8")
             if chunk and chunk.startswith("data:"):
                 if chunk == "data: [DONE]":
                     break
                 data = json.loads(chunk[5:].strip("\n"))
-                text = find_printable_text(data["text"][pos:])
+                chunk_text = data["text"][pos:]
                 meta_info = data["meta_info"]
-                pos += len(text)
-                incomplete_text = data["text"][pos:]
-                yield text, meta_info
-
-        if len(incomplete_text) > 0:
-            yield incomplete_text, meta_info
+                pos += len(chunk_text)
+                yield chunk_text, meta_info
 
     def select(
         self,
@@ -207,7 +219,7 @@ class RuntimeEndpoint(BaseBackend):
             api_key=self.api_key,
             verify=self.verify,
         )
-        assert res.status_code == 200
+        self._assert_success(res)
         prompt_len = res.json()["meta_info"]["prompt_tokens"]
 
         # Compute logprob
@@ -216,7 +228,6 @@ class RuntimeEndpoint(BaseBackend):
             "sampling_params": {"max_new_tokens": 0},
             "return_logprob": True,
             "logprob_start_len": max(prompt_len - 2, 0),
-            "return_text_in_logprobs": True,
         }
         self._add_images(s, data)
         res = http_request(
@@ -226,7 +237,7 @@ class RuntimeEndpoint(BaseBackend):
             api_key=self.api_key,
             verify=self.verify,
         )
-        assert res.status_code == 200
+        self._assert_success(res)
         obj = res.json()
         normalized_prompt_logprobs = [
             r["meta_info"]["normalized_prompt_logprob"] for r in obj
@@ -250,9 +261,13 @@ class RuntimeEndpoint(BaseBackend):
             api_key=self.api_key,
             verify=self.verify,
         )
-        assert res.status_code == 200
+        self._assert_success(res)
 
     def _add_images(self, s: StreamExecutor, data):
         if s.images_:
-            # assert len(s.images_) == 1, "Only support one image."
+            assert len(s.images_) == 1, "Only support one image."
             data["image_data"] = s.images_[0][1]
+
+    def _assert_success(self, res):
+        if res.status_code != 200:
+            raise RuntimeError(res.json())

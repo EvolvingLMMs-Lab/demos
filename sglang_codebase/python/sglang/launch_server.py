@@ -1,8 +1,9 @@
+"""Launch the inference server."""
+
 import argparse
 
-from sglang.srt.server import ServerArgs, launch_server
-import multiprocessing as mp
-mp.set_start_method('spawn', force=True)
+from sglang.srt.server import launch_server
+from sglang.srt.server_args import ServerArgs
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

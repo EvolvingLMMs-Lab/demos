@@ -33,11 +33,20 @@ python serve/sglang_worker.py --host 0.0.0.0 --controller http://localhost:12355
 
 pip install gradio==4.29.0
 pip install httpx==0.23.3
-
+pip install flashinfer -i https://flashinfer.ai/whl/cu121/torch2.3/
 
 # OpenAI Compatible Server
 ```bash
 python -m sglang.launch_server --model-path lmms-lab/llama3-llava-next-8b --tokenizer-path lmms-lab/llama3-llava-next-8b-tokenizer --port=12000 --host="127.0.0.1" --tp-size=1 --chat-template llava_llama_3
+
+python test_openai_llava.py
+```
+
+# LLaVA OneVision Test
+
+```bash
+OV_MODEL=/mnt/bn/vl-research/checkpoints/onevision/llavanext-google_siglip-so400m-patch14-384-Qwen_Qwen2-7B-Instruct-mid_to_final_next_2p4m_am9_continual_ov
+python -m sglang.launch_server --model-path $OV_MODEL --tokenizer-path lmms-lab/llavanext-qwen-siglip-tokenizer --port=30000 --host="127.0.0.1" --tp-size=1
 
 python test_openai_llava.py
 ```
