@@ -744,7 +744,7 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
             video = gr.Video(label="Input Video", visible=False)
 
             gr.Examples(
-                examples_per_page=6,
+                examples_per_page=4,
                 examples=[
                     [
                         {
@@ -754,14 +754,14 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
                             "text": "Write the content of this table in a Notion format?",
                         },
                     ],
-                    [
-                        {
-                            "files": [
-                                f"{PARENT_FOLDER}/assets/otter_books.jpg",
-                            ],
-                            "text": "Why these two animals are reading books?",
-                        },
-                    ],
+                    # [
+                    #     {
+                    #         "files": [
+                    #             f"{PARENT_FOLDER}/assets/otter_books.jpg",
+                    #         ],
+                    #         "text": "Why these two animals are reading books?",
+                    #     },
+                    # ],
                     [
                         {
                             "files": [
@@ -986,7 +986,6 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
             clear_history,
             None,
             [state, chatbot, textbox] + btn_list,
-            queue=False,
         )
 
         textbox.submit(
@@ -1041,7 +1040,7 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", type=str, default="0.0.0.0")
-    parser.add_argument("--port", type=int, default=7880)
+    parser.add_argument("--port", type=int, default=7860)
     parser.add_argument("--controller-url", type=str, default="http://localhost:12355")
     parser.add_argument("--concurrency-count", type=int, default=32)
     parser.add_argument(
