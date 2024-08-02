@@ -660,7 +660,7 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
     textbox = gr.MultimodalTextbox(
         interactive=True,
         file_types=["image", "video"],
-        file_count="multiple",
+        # file_count="multiple",
         placeholder="Enter message or upload file...",
         show_label=False,
         max_lines=10000,
@@ -1059,7 +1059,7 @@ if __name__ == "__main__":
     demo = build_demo(args.embed, concurrency_count=args.concurrency_count)
     demo.queue(api_open=False).launch(
         # server_name=args.host,
+        share=True,
         server_port=args.port,
-        share=args.share,
         favicon_path=f"{PARENT_FOLDER}/assets/favicon.ico",
     )
