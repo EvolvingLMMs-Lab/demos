@@ -212,6 +212,30 @@ def add_text(video_input, state, messages, image_process_mode, request: gr.Reque
     if state is None:
         state = default_conversation.copy()
 
+    # File size and count checks
+    max_file_size = 10 * 1024 * 1024  # 10MB in bytes
+    oversized_files = [file for file in messages["files"] if os.path.getsize(file) > max_file_size]
+
+    if len(messages["files"]) > 3:
+        error_message = "You can upload a maximum of 3 files."
+        logger.warning(error_message)
+        return (
+            state,
+            state.to_gradio_chatbot(),
+            gr.MultimodalTextbox(value={"text": error_message, "files": []}, interactive=True),
+            None,
+        ) + (disable_btn,) * 5
+
+    if oversized_files:
+        error_message = "One or more files exceed the 10MB size limit."
+        logger.warning(error_message)
+        return (
+            state,
+            state.to_gradio_chatbot(),
+            gr.MultimodalTextbox(value={"text": error_message, "files": []}, interactive=True),
+            None,
+        ) + (disable_btn,) * 5
+    
     # Moderation
     if len(text) <= 0 and image is None:
         state.skip_next = True

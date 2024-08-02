@@ -48,8 +48,8 @@ python test_openai_llava.py
 # OV_MODEL=lmms-lab/llava-onevision-qwen2-7b-ov
 python -m sglang.launch_server --model-path lmms-lab/llava-onevision-qwen2-7b-ov --tokenizer-path lmms-lab/llavanext-qwen-siglip-tokenizer --port=30000 --host="127.0.0.1" --tp-size=8 --chat-template=chatml-llava
 
-pip install https://gradio-builds.s3.amazonaws.com/f94000877d57cf10f69d55c3aef8f6d9fd93fa7c/gradio-4.40.0-py3-none-any.whl
 pip install "gradio-client @ git+https://github.com/gradio-app/gradio@f94000877d57cf10f69d55c3aef8f6d9fd93fa7c#subdirectory=client/python"
+pip install https://gradio-builds.s3.amazonaws.com/f94000877d57cf10f69d55c3aef8f6d9fd93fa7c/gradio-4.40.0-py3-none-any.whl
 
 python test_openai_llava.py
 
