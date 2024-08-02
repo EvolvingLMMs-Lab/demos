@@ -193,8 +193,13 @@ def clear_history(request: gr.Request):
         state,
         state.to_gradio_chatbot(),
         gr.MultimodalTextbox(value=None, interactive=True),
-        None,
-    ) + (disable_btn,) * 5
+    ) + (
+        disable_btn,
+        disable_btn,
+        disable_btn,
+        disable_btn,
+        enable_btn,
+    )
 
 
 RPM_LIMIT = 300
@@ -213,10 +218,14 @@ def add_text(video_input, state, messages, image_process_mode, request: gr.Reque
         state = default_conversation.copy()
 
     # File size and count checks
-    max_file_size = 10 * 1024 * 1024  # 10MB in bytes
+    max_file_size = 30 * 1024 * 1024  # 10MB in bytes
     oversized_files = [file for file in messages["files"] if os.path.getsize(file) > max_file_size]
 
-    if len(messages["files"]) == 0:
+    # Check total number of files in the state
+    total_files = sum(len(msg[1][1]) if isinstance(msg[1], tuple) else 0 for msg in state.messages)
+    current_files = len(messages["files"])
+
+    if total_files + current_files == 0:
         error_message = "You need to upload at least one image or video. Please reload to try again."
         state.messages[-1][-1] = error_message
         state.skip_next = True
@@ -225,11 +234,11 @@ def add_text(video_input, state, messages, image_process_mode, request: gr.Reque
             state,
             state.to_gradio_chatbot(),
             gr.MultimodalTextbox(value={"text": error_message, "files": []}, interactive=False),
-            None,
-        ) + (disable_btn,) * 5    
+            # None,
+        ) + (no_change_btn,) * 5    
 
-    if len(messages["files"]) > 3:
-        error_message = "You can upload a maximum of 3 files. Please reload to try again."
+    if total_files + current_files > 3:
+        error_message = "You can upload a maximum of 3 files in total. Please reload to try again."
         logger.warning(error_message)
         state.messages[-1][-1] = error_message
         state.skip_next = True
@@ -237,8 +246,8 @@ def add_text(video_input, state, messages, image_process_mode, request: gr.Reque
             state,
             state.to_gradio_chatbot(),
             gr.MultimodalTextbox(value={"text": error_message, "files": []}, interactive=False),
-            None,
-        ) + (disable_btn,) * 5
+            # None,
+        ) + (no_change_btn,) * 5
 
     if oversized_files:
         error_message = "One or more files exceed the 10MB size limit. Please reload to try again."
@@ -249,8 +258,8 @@ def add_text(video_input, state, messages, image_process_mode, request: gr.Reque
             state,
             state.to_gradio_chatbot(),
             gr.MultimodalTextbox(value={"text": error_message, "files": []}, interactive=False),
-            None,
-        ) + (disable_btn,) * 5
+            # None,
+        ) + (no_change_btn,) * 5
     
     # Moderation
     if len(text) <= 0 and image is None:
@@ -259,7 +268,7 @@ def add_text(video_input, state, messages, image_process_mode, request: gr.Reque
             state,
             state.to_gradio_chatbot(),
             gr.MultimodalTextbox(value=None, interactive=True),
-            None,
+            # None,
         ) + (no_change_btn,) * 5
 
     if args.moderate:
@@ -277,7 +286,7 @@ def add_text(video_input, state, messages, image_process_mode, request: gr.Reque
                 state,
                 state.to_gradio_chatbot(),
                 gr.MultimodalTextbox(value=mod_value, interactive=True),
-                None,
+                # None,
             ) + (disable_btn,) * 5
 
     ################ Multi Image Check #########################
@@ -326,7 +335,7 @@ def add_text(video_input, state, messages, image_process_mode, request: gr.Reque
             state,
             state.to_gradio_chatbot(),
             gr.MultimodalTextbox(value=ret_value, interactive=True),
-            None,
+            # None,
         ) + (disable_btn,) * 5
 
     # text = text[:1536]  # Hard cut-off
@@ -349,8 +358,14 @@ def add_text(video_input, state, messages, image_process_mode, request: gr.Reque
         state,
         state.to_gradio_chatbot(),
         gr.MultimodalTextbox(value=None, interactive=False),
-        None,
-    ) + (disable_btn,) * 5
+        # None,
+    ) + (
+        enable_btn,
+        enable_btn,
+        enable_btn,
+        enable_btn,
+        enable_btn,
+    )
 
 
 def encode_image(image_path):
@@ -1098,7 +1113,7 @@ if __name__ == "__main__":
     demo = build_demo(args.embed, concurrency_count=args.concurrency_count)
     demo.queue(api_open=False).launch(
         # server_name=args.host,
-        share=True,
+        share=False,
         server_port=args.port,
         favicon_path=f"{PARENT_FOLDER}/assets/favicon.ico",
     )
