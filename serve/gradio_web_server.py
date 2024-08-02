@@ -212,6 +212,46 @@ def add_text(video_input, state, messages, image_process_mode, request: gr.Reque
     if state is None:
         state = default_conversation.copy()
 
+    # File size and count checks
+    max_file_size = 10 * 1024 * 1024  # 10MB in bytes
+    oversized_files = [file for file in messages["files"] if os.path.getsize(file) > max_file_size]
+
+    if len(messages["files"]) == 0:
+        error_message = "You need to upload at least one image or video. Please reload to try again."
+        state.messages[-1][-1] = error_message
+        state.skip_next = True
+        logger.warning(error_message)
+        return (
+            state,
+            state.to_gradio_chatbot(),
+            gr.MultimodalTextbox(value={"text": error_message, "files": []}, interactive=False),
+            None,
+        ) + (disable_btn,) * 5    
+
+    if len(messages["files"]) > 3:
+        error_message = "You can upload a maximum of 3 files. Please reload to try again."
+        logger.warning(error_message)
+        state.messages[-1][-1] = error_message
+        state.skip_next = True
+        return (
+            state,
+            state.to_gradio_chatbot(),
+            gr.MultimodalTextbox(value={"text": error_message, "files": []}, interactive=False),
+            None,
+        ) + (disable_btn,) * 5
+
+    if oversized_files:
+        error_message = "One or more files exceed the 10MB size limit. Please reload to try again."
+        logger.warning(error_message)
+        state.messages[-1][-1] = error_message
+        state.skip_next = True        
+        return (
+            state,
+            state.to_gradio_chatbot(),
+            gr.MultimodalTextbox(value={"text": error_message, "files": []}, interactive=False),
+            None,
+        ) + (disable_btn,) * 5
+    
     # Moderation
     if len(text) <= 0 and image is None:
         state.skip_next = True
@@ -744,7 +784,7 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
             video = gr.Video(label="Input Video", visible=False)
 
             gr.Examples(
-                examples_per_page=6,
+                examples_per_page=4,
                 examples=[
                     [
                         {
@@ -754,14 +794,14 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
                             "text": "Write the content of this table in a Notion format?",
                         },
                     ],
-                    [
-                        {
-                            "files": [
-                                f"{PARENT_FOLDER}/assets/otter_books.jpg",
-                            ],
-                            "text": "Why these two animals are reading books?",
-                        },
-                    ],
+                    # [
+                    #     {
+                    #         "files": [
+                    #             f"{PARENT_FOLDER}/assets/otter_books.jpg",
+                    #         ],
+                    #         "text": "Why these two animals are reading books?",
+                    #     },
+                    # ],
                     [
                         {
                             "files": [
@@ -986,7 +1026,6 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
             clear_history,
             None,
             [state, chatbot, textbox] + btn_list,
-            queue=False,
         )
 
         textbox.submit(
@@ -1041,7 +1080,7 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", type=str, default="0.0.0.0")
-    parser.add_argument("--port", type=int, default=7880)
+    parser.add_argument("--port", type=int, default=7860)
     parser.add_argument("--controller-url", type=str, default="http://localhost:12355")
     parser.add_argument("--concurrency-count", type=int, default=32)
     parser.add_argument(

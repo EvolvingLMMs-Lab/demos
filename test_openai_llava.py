@@ -1,6 +1,5 @@
 import openai
-
-client = openai.Client(api_key="EMPTY", base_url="http://127.0.0.1:12000/v1")
+client = openai.Client(api_key="EMPTY", base_url="https://llava-next-endpoint.lmms-lab.com/v1")
 response = client.chat.completions.create(
     model="default",
     messages=[
