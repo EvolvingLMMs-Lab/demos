@@ -224,6 +224,10 @@ def add_text(video_input, state, messages, image_process_mode, request: gr.Reque
     # Check total number of files in the state
     total_files = sum(len(msg[1][1]) if isinstance(msg[1], tuple) else 0 for msg in state.messages)
     current_files = len(messages["files"])
+    
+    # Count video files
+    total_video_files = sum(1 for msg in state.messages if isinstance(msg[1], tuple) and any(state.is_video_file(f) for f in msg[1][1]))
+    current_video_files = sum(1 for f in messages["files"] if state.is_video_file(f))
 
     if total_files + current_files == 0:
         error_message = "You need to upload at least one image or video. Please reload to try again."
@@ -234,11 +238,10 @@ def add_text(video_input, state, messages, image_process_mode, request: gr.Reque
             state,
             state.to_gradio_chatbot(),
             gr.MultimodalTextbox(value={"text": error_message, "files": []}, interactive=False),
-            # None,
         ) + (no_change_btn,) * 5    
 
-    if total_files + current_files > 3:
-        error_message = "You can upload a maximum of 3 files in total. Please reload to try again."
+    if total_files + current_files > 6:
+        error_message = "You can upload a maximum of 6 files in total. Please reload to try again."
         logger.warning(error_message)
         state.messages[-1][-1] = error_message
         state.skip_next = True
@@ -246,7 +249,17 @@ def add_text(video_input, state, messages, image_process_mode, request: gr.Reque
             state,
             state.to_gradio_chatbot(),
             gr.MultimodalTextbox(value={"text": error_message, "files": []}, interactive=False),
-            # None,
+        ) + (no_change_btn,) * 5
+
+    if total_video_files + current_video_files > 2:
+        error_message = "You can upload a maximum of 2 video files. Please reload to try again."
+        logger.warning(error_message)
+        state.messages[-1][-1] = error_message
+        state.skip_next = True
+        return (
+            state,
+            state.to_gradio_chatbot(),
+            gr.MultimodalTextbox(value={"text": error_message, "files": []}, interactive=False),
         ) + (no_change_btn,) * 5
 
     if oversized_files:
@@ -696,7 +709,7 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
         [],
         elem_id="chatbot",
         bubble_full_width=False,
-        height=660,
+        height=600,
         avatar_images=(
             (
                 os.path.join(
@@ -729,6 +742,7 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
         if not embed_mode:
             # gr.Markdown(title_markdown)
             gr.HTML(html_header)
+            gr.Markdown("\nNote: `AnyResMax9` strategy is only applied for single image-text interactions (best for high-resolution images). Multi-image and multi-turn image-text conversations will use default tokenization (729 tokens per image).")
 
         with gr.Row():
             model_selector = gr.Dropdown(
