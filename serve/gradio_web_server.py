@@ -34,10 +34,11 @@ import shortuuid
 from black_magic_utils import process_images
 
 
-cur_file_path = os.path.dirname(os.path.abspath(__file__))
-os.makedirs(f"{cur_file_path}/logs", exist_ok=True)
+# cur_file_path = os.path.dirname(os.path.abspath(__file__))
+external_log_dir = "/raid/boli/logs"
+os.makedirs(external_log_dir, exist_ok=True)
 logger = build_logger(
-    "gradio_web_server", f"{cur_file_path}/logs/gradio_web_server.log"
+    "gradio_web_server", f"/raid/boli/logs/gradio_web_server.log"
 )
 
 headers = {"User-Agent": "LLaVA-NeXT Client"}
@@ -47,7 +48,7 @@ enable_btn = gr.Button(interactive=True)
 disable_btn = gr.Button(interactive=False)
 
 PARENT_FOLDER = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LOGDIR = f"{PARENT_FOLDER}/logs"
+LOGDIR = external_log_dir
 print(PARENT_FOLDER)
 
 priority = {
@@ -815,14 +816,6 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
             gr.Examples(
                 examples_per_page=4,
                 examples=[
-                    [
-                        {
-                            "files": [
-                                f"{PARENT_FOLDER}/assets/user_example_06.jpg",
-                            ],
-                            "text": "Write the content of this table in a Notion format?",
-                        },
-                    ],
                     # [
                     #     {
                     #         "files": [
@@ -858,19 +851,27 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
                     [
                         {
                             "files": [
-                                f"{PARENT_FOLDER}/assets/user_example_11.png",
+                                f"{PARENT_FOLDER}/assets/som.png",
                             ],
-                            "text": "write an image prompt for this character without details about the surrounding.\nInclude color and details about all of these variables: age, eyes, hair, skin, expression, clothes",
+                            "text": "Here's an image with objects labeled in numbers. Please describe the objects that are marked as 4, 5 and 7.",
                         },
-                    ],
-                    [
-                        {
-                            "files": [
-                                f"{PARENT_FOLDER}/assets/user_example_10.png",
-                            ],
-                            "text": "Here's a design for blogging website.\nProvide the working source code for the website using HTML, CSS and JavaScript as required.",
-                        },
-                    ],
+                    ],                    
+                    # [
+                    #     {
+                    #         "files": [
+                    #             f"{PARENT_FOLDER}/assets/user_example_11.png",
+                    #         ],
+                    #         "text": "write an image prompt for this character without details about the surrounding.\nInclude color and details about all of these variables: age, eyes, hair, skin, expression, clothes",
+                    #     },
+                    # ],
+                    # [
+                    #     {
+                    #         "files": [
+                    #             f"{PARENT_FOLDER}/assets/user_example_10.png",
+                    #         ],
+                    #         "text": "Here's a design for blogging website.\nProvide the working source code for the website using HTML, CSS and JavaScript as required.",
+                    #     },
+                    # ],
                 ],
                 inputs=[textbox],
                 label="Image",
@@ -882,11 +883,12 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
                     [
                         {
                             "files": [
-                                f"{PARENT_FOLDER}/assets/cpRSZOcJrs029ixB.mp4",
+                                f"{PARENT_FOLDER}/assets/mushroom.png",
+                                f"{PARENT_FOLDER}/assets/mushroom_video.mp4",
                             ],
-                            "text": "What's the unusual part of this video?",
+                            "text": "Please provide the video generation instruction that can change the source image to the target video."
                         },
-                    ],
+                    ],                   
                     [
                         {
                             "files": [
@@ -895,13 +897,30 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
                             "text": "What's the creative part of this video?",
                         },
                     ],
+                    # [
+                    #     {
+                    #         "files": [
+                    #             f"{PARENT_FOLDER}/assets/couples_01.mp4",
+                    #             f"{PARENT_FOLDER}/assets/couples_00.mp4",
+                    #         ],
+                    #         "text": "Here are two videos, please provide the analysis on their differences.",
+                    #     },
+                    # ],
                     [
                         {
                             "files": [
-                                f"{PARENT_FOLDER}/assets/cpRSZOcJrs029ixB.mp4",
-                                f"{PARENT_FOLDER}/assets/aquarium-nyc.mp4",
+                                f"{PARENT_FOLDER}/assets/multi-view.mov",
                             ],
-                            "text": "What is the difference between these two videos?",
+                            "text": "Here is a video showing four camera views of a driving car. The top two show front views, and the bottom two show back views. First describe the video of each view in detail, and then plan the next move of the ego car.",
+                        },
+                    ],                     
+                    [
+                        {
+                            "files": [
+                                f"{PARENT_FOLDER}/assets/butterfly1.mp4",
+                                f"{PARENT_FOLDER}/assets/butterfly2.mp4",
+                            ],
+                            "text": "What are the differences between the two videos?",
                         },
                     ],
                 ],
@@ -916,44 +935,34 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
                     [
                         {
                             "files": [
-                                f"{PARENT_FOLDER}/assets/mistral-large-2407-multiple.png",
-                                f"{PARENT_FOLDER}/assets/mistral-large-2407-language-diversity.png",
+                                f"{PARENT_FOLDER}/assets/multi-image01.png",
+                                f"{PARENT_FOLDER}/assets/multi-image02.png",
                             ],
-                            "text": "Conclude based on above news.",
-                        }
-                    ],
-                    [
-                        {
-                            "files": [
-                                f"{PARENT_FOLDER}/assets/shub.jpg",
-                                f"{PARENT_FOLDER}/assets/shuc.jpg",
-                                f"{PARENT_FOLDER}/assets/shud.jpg",
-                            ],
-                            "text": "what is fun about the images?",
+                            "text": "Ross owns a house similar to the brown sector in the following image . They want to get the insurance from Allstate. The price per unit area is given in the following figure . What would be the cost of insuring the whole house? All the computations are rounded to two places of decimal.",
                         },
                     ],
-                    [
-                        {
-                            "files": [
-                                f"{PARENT_FOLDER}/assets/iphone-15-price-1024x576.jpg",
-                                f"{PARENT_FOLDER}/assets/dynamic-island-1024x576.jpg",
-                                f"{PARENT_FOLDER}/assets/iphone-15-colors-1024x576.jpg",
-                                f"{PARENT_FOLDER}/assets/Iphone-15-Usb-c-charger-1024x576.jpg",
-                                f"{PARENT_FOLDER}/assets/A-17-processors-1024x576.jpg",
-                            ],
-                            "text": "The images are the PPT of iPhone 15 review. can you summarize the main information?",
-                        }
-                    ],
-                    [
-                        {
-                            "files": [
-                                f"{PARENT_FOLDER}/assets/fangao3.jpeg",
-                                f"{PARENT_FOLDER}/assets/fangao2.jpeg",
-                                f"{PARENT_FOLDER}/assets/fangao1.jpeg",
-                            ],
-                            "text": "Do you kown who draw these paintings?",
-                        },
-                    ],
+                    # [
+                    #     {
+                    #         "files": [
+                    #             f"{PARENT_FOLDER}/assets/iphone-15-price-1024x576.jpg",
+                    #             f"{PARENT_FOLDER}/assets/dynamic-island-1024x576.jpg",
+                    #             f"{PARENT_FOLDER}/assets/iphone-15-colors-1024x576.jpg",
+                    #             f"{PARENT_FOLDER}/assets/Iphone-15-Usb-c-charger-1024x576.jpg",
+                    #             f"{PARENT_FOLDER}/assets/A-17-processors-1024x576.jpg",
+                    #         ],
+                    #         "text": "The images are the PPT of iPhone 15 review. can you summarize the main information?",
+                    #     }
+                    # ],
+                    # [
+                    #     {
+                    #         "files": [
+                    #             f"{PARENT_FOLDER}/assets/fangao3.jpeg",
+                    #             f"{PARENT_FOLDER}/assets/fangao2.jpeg",
+                    #             f"{PARENT_FOLDER}/assets/fangao1.jpeg",
+                    #         ],
+                    #         "text": "Do you kown who draw these paintings?",
+                    #     },
+                    # ],
                     [
                         {
                             "files": [
@@ -966,22 +975,31 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
                     [
                         {
                             "files": [
+                                f"{PARENT_FOLDER}/assets/mistral-large-2407-multiple.png",
+                                f"{PARENT_FOLDER}/assets/mistral-large-2407-language-diversity.png",
+                            ],
+                            "text": "Conclude based on above news.",
+                        }
+                    ],                    
+                    [
+                        {
+                            "files": [
                                 f"{PARENT_FOLDER}/assets/original_bench.jpeg",
                                 f"{PARENT_FOLDER}/assets/changed_bench.jpeg",
                             ],
                             "text": "How to edit image1 to make it look like image2?",
                         },
                     ],
-                    [
-                        {
-                            "files": [
-                                f"{PARENT_FOLDER}/assets/twitter2.jpeg",
-                                f"{PARENT_FOLDER}/assets/twitter3.jpeg",
-                                f"{PARENT_FOLDER}/assets/twitter4.jpeg",
-                            ],
-                            "text": "Please write a twitter blog post with the images.",
-                        }
-                    ],
+                    # [
+                    #     {
+                    #         "files": [
+                    #             f"{PARENT_FOLDER}/assets/twitter2.jpeg",
+                    #             f"{PARENT_FOLDER}/assets/twitter3.jpeg",
+                    #             f"{PARENT_FOLDER}/assets/twitter4.jpeg",
+                    #         ],
+                    #         "text": "Please write a twitter blog post with the images.",
+                    #     }
+                    # ],
                 ],
             )
 
