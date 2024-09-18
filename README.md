@@ -19,11 +19,7 @@ cd ..;
 pip install -U gradio;
 pip install httpx==0.23.3;
 
-CUDA_VISIBLE_DEVICES=4,5,6,7 python -m sglang.launch_server --model-path lmms-lab/llava-next-72b --tokenizer-path lmms-lab/llavanext-qwen-tokenizer --port=30000 --host="127.0.0.1" --tp-size=4
-
-CUDA_VISIBLE_DEVICES=0,1,2,3 python -m sglang.launch_server --model-path lmms-lab/llama3-llava-next-8b --tokenizer-path lmms-lab/llama3-llava-next-8b-tokenizer --port=10000 --host="127.0.0.1" --tp-size=4
-
-python -m sglang.launch_server --model-path xxxxx --tokenizer-path lmms-lab/llavanext-qwen-tokenizer --port=30000 --host="127.0.0.1" --dp-size=8
+python3 -m sglang.launch_server --model-path MMSFT/sft_llava_qwen_2_1M_rewrite_resupply --tokenizer-path lmms-lab/llavanext-qwen-siglip-tokenizer --port=30000 --host=127.0.0.1 --chat-template=chatml-llava;
 
 # after installing sglang, you can then run the following to start the controller and the gradio web server, and the sglang worker to listen for requests
 

@@ -1,5 +1,6 @@
 import openai
-client = openai.Client(api_key="EMPTY", base_url="https://llava-next-endpoint.lmms-lab.com/v1")
+
+client = openai.Client(api_key="EMPTY", base_url="https://127.0.0.1:10000/v1")
 response = client.chat.completions.create(
     model="default",
     messages=[
@@ -7,21 +8,12 @@ response = client.chat.completions.create(
             "role": "user",
             "content": [
                 {
-                    "type": "image_url",
-                    "image_url": {
-                        "url": "https://raw.githubusercontent.com/sgl-project/sglang/main/assets/mixtral_8x7b.jpg"
-                    },
+                    "type": "text",
+                    "text": "Describe this image in a very short sentence.",
                 },
-                {"type": "text", "text": "Describe this image"},
             ],
         },
-        {
-            "role": "assistant",
-            "content": "A bar chart.",
-        },
-        {"role": "user", "content": "More details?"},
     ],
-    temperature=0.7,
-    max_tokens=512,
+    temperature=0,
 )
 print(response.choices[0].message.content)

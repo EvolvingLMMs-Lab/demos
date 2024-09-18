@@ -117,7 +117,7 @@ def test_streaming(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", type=str, default="http://127.0.0.1")
-    parser.add_argument("--port", type=int, default=30000)
+    parser.add_argument("--port", type=int, default=10000)
     args = parser.parse_args()
     # asyncio.run(test_concurrent(args))
     test_streaming(args)
