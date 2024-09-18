@@ -436,6 +436,12 @@ def convert_state_to_openai_messages(state):
         if isinstance(content, tuple) and len(content) == 3:
             text, image_paths, _ = content
             message_content = []
+            
+            if len(image_paths) == 1:
+                modalities = "image"
+            elif len(image_paths) > 1:
+                modalities = "multi-images"
+            
             for image_path in image_paths:
                 if state.is_image_file(image_path):
                     message_content.append(
@@ -444,15 +450,18 @@ def convert_state_to_openai_messages(state):
                             "image_url": {
                                 "url": f"data:image/jpeg;base64,{encode_image(image_path)}"
                             },
+                            "modalities": modalities,
                         }
                     )
                 elif state.is_video_file(image_path):
+                    modalities = "video"
                     video_frames = extract_video_frames(image_path, frame_count=32)
                     for frame in video_frames:
                         message_content.append(
                             {
                                 "type": "image_url",
                                 "image_url": {"url": f"data:image/jpeg;base64,{frame}"},
+                                "modalities": modalities,
                             }
                         )
 
