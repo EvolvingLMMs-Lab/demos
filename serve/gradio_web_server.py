@@ -35,10 +35,10 @@ from black_magic_utils import process_images
 
 
 # cur_file_path = os.path.dirname(os.path.abspath(__file__))
-external_log_dir = "/raid/boli/logs"
+external_log_dir = "./logs"
 os.makedirs(external_log_dir, exist_ok=True)
 logger = build_logger(
-    "gradio_web_server", f"/raid/boli/logs/gradio_web_server.log"
+    "gradio_web_server", f"{external_log_dir}/gradio_web_server.log"
 )
 
 headers = {"User-Agent": "LLaVA-NeXT Client"}
@@ -848,14 +848,14 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
                             "text": "Why this image funny?",
                         },
                     ],
-                    [
-                        {
-                            "files": [
-                                f"{PARENT_FOLDER}/assets/som.png",
-                            ],
-                            "text": "Here's an image with objects labeled in numbers. Please describe the objects that are marked as 4, 5 and 7.",
-                        },
-                    ],                    
+                    # [
+                    #     {
+                    #         "files": [
+                    #             f"{PARENT_FOLDER}/assets/som.png",
+                    #         ],
+                    #         "text": "Here's an image with objects labeled in numbers. Please describe the objects that are marked as 4, 5 and 7.",
+                    #     },
+                    # ],                    
                     # [
                     #     {
                     #         "files": [
@@ -880,15 +880,15 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
             gr.Examples(
                 label="Video",
                 examples=[
-                    [
-                        {
-                            "files": [
-                                f"{PARENT_FOLDER}/assets/mushroom.png",
-                                f"{PARENT_FOLDER}/assets/mushroom_video.mp4",
-                            ],
-                            "text": "Please provide the video generation instruction that can change the source image to the target video."
-                        },
-                    ],                   
+                    # [
+                    #     {
+                    #         "files": [
+                    #             f"{PARENT_FOLDER}/assets/mushroom.png",
+                    #             f"{PARENT_FOLDER}/assets/mushroom_video.mp4",
+                    #         ],
+                    #         "text": "Please provide the video generation instruction that can change the source image to the target video."
+                    #     },
+                    # ],                   
                     [
                         {
                             "files": [
@@ -897,6 +897,15 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
                             "text": "What's the creative part of this video?",
                         },
                     ],
+                    [
+                        {
+                            "files": [
+                                f"{PARENT_FOLDER}/assets/butterfly1.mp4",
+                                f"{PARENT_FOLDER}/assets/butterfly2.mp4",
+                            ],
+                            "text": "What are the differences between the two videos?",
+                        },
+                    ],                    
                     # [
                     #     {
                     #         "files": [
@@ -914,15 +923,6 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
                             "text": "Here is a video showing four camera views of a driving car. The top two show front views, and the bottom two show back views. First describe the video of each view in detail, and then plan the next move of the ego car.",
                         },
                     ],                     
-                    [
-                        {
-                            "files": [
-                                f"{PARENT_FOLDER}/assets/butterfly1.mp4",
-                                f"{PARENT_FOLDER}/assets/butterfly2.mp4",
-                            ],
-                            "text": "What are the differences between the two videos?",
-                        },
-                    ],
                 ],
                 inputs=[textbox],
             )
@@ -1145,7 +1145,7 @@ if __name__ == "__main__":
     demo = build_demo(args.embed, concurrency_count=args.concurrency_count)
     demo.queue(api_open=False).launch(
         # server_name=args.host,
-        share=False,
+        share=args.share,
         server_port=args.port,
         favicon_path=f"{PARENT_FOLDER}/assets/favicon.ico",
     )

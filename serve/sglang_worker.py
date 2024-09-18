@@ -28,7 +28,7 @@ from llava.mm_utils import (
 from llava.constants import DEFAULT_IMAGE_TOKEN
 
 import sglang as sgl
-from sglang.backend.runtime_endpoint import RuntimeEndpoint
+from sglang.lang.backend.runtime_endpoint import RuntimeEndpoint
 
 
 GB = 1 << 30
