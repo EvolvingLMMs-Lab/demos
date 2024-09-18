@@ -15,11 +15,10 @@ limitations under the License.
 
 """Utilities for Huggingface Transformers."""
 
-import functools
-import json
+import contextlib
 import os
 import warnings
-from typing import AbstractSet, Collection, Dict, List, Literal, Optional, Type, Union
+from typing import Dict, Optional, Type, Union
 
 from huggingface_hub import snapshot_download
 from transformers import (
@@ -34,15 +33,20 @@ from transformers import (
 try:
     from vllm.transformers_utils.configs import ChatGLMConfig, DbrxConfig
 
+    from sglang.srt.configs import ExaoneConfig
+
     _CONFIG_REGISTRY: Dict[str, Type[PretrainedConfig]] = {
         ChatGLMConfig.model_type: ChatGLMConfig,
         DbrxConfig.model_type: DbrxConfig,
+        ExaoneConfig.model_type: ExaoneConfig,
     }
 except ImportError:
     # We want this file to run without vllm dependency
     _CONFIG_REGISTRY: Dict[str, Type[PretrainedConfig]] = {}
 
-from sglang.srt.utils import is_multimodal_model
+for name, cls in _CONFIG_REGISTRY.items():
+    with contextlib.suppress(ValueError):
+        AutoConfig.register(name, cls)
 
 
 def download_from_hf(model_path: str):
@@ -52,17 +56,11 @@ def download_from_hf(model_path: str):
     return snapshot_download(model_path, allow_patterns=["*.json", "*.bin", "*.model"])
 
 
-def get_config_json(model_path: str):
-    with open(os.path.join(model_path, "config.json")) as f:
-        config = json.load(f)
-    return config
-
-
 def get_config(
     model: str,
     trust_remote_code: bool,
     revision: Optional[str] = None,
-    model_overide_args: Optional[dict] = None,
+    model_override_args: Optional[dict] = None,
 ):
     config = AutoConfig.from_pretrained(
         model, trust_remote_code=trust_remote_code, revision=revision
@@ -70,8 +68,8 @@ def get_config(
     if config.model_type in _CONFIG_REGISTRY:
         config_class = _CONFIG_REGISTRY[config.model_type]
         config = config_class.from_pretrained(model, revision=revision)
-    if model_overide_args:
-        config.update(model_overide_args)
+    if model_override_args:
+        config.update(model_override_args)
     return config
 
 
@@ -89,10 +87,10 @@ CONTEXT_LENGTH_KEYS = [
 
 
 def get_context_length(config):
-    """Get the context length of a model from a huggingface model config."""
+    """Get the context length of a model from a huggingface model configs."""
     rope_scaling = getattr(config, "rope_scaling", None)
     if rope_scaling:
-        rope_scaling_factor = config.rope_scaling["factor"]
+        rope_scaling_factor = config.rope_scaling.get("factor", 1)
         if "original_max_position_embeddings" in rope_scaling:
             rope_scaling_factor = 1
         if config.rope_scaling.get("rope_type", None) == "llama3":

@@ -735,7 +735,7 @@ def build_demo(embed_mode, cur_dir=None, concurrency_count=10):
         max_lines=10000,
     )
     with gr.Blocks(
-        theme="finlaymacklon/smooth_slate",
+        # theme="finlaymacklon/smooth_slate",
         title="LLaVA OneVision",
         css=".message-wrap.svelte-1lcyrx4>div.svelte-1lcyrx4  img {min-width: 40px}",
     ) as demo:
